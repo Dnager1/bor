@@ -41,7 +41,7 @@ async def run_migration(db_path: str):
                     ALTER TABLE alliances 
                     ADD COLUMN alliance_logo TEXT DEFAULT '🏰'
                 """)
-            except:
+            except Exception:
                 pass
             
             try:
@@ -49,7 +49,7 @@ async def run_migration(db_path: str):
                     ALTER TABLE alliances 
                     ADD COLUMN alliance_type TEXT DEFAULT 'public' CHECK(alliance_type IN ('public', 'private'))
                 """)
-            except:
+            except Exception:
                 pass
             
             try:
@@ -57,7 +57,7 @@ async def run_migration(db_path: str):
                     ALTER TABLE alliances 
                     ADD COLUMN max_members INTEGER DEFAULT 50
                 """)
-            except:
+            except Exception:
                 pass
             
             try:
@@ -65,7 +65,7 @@ async def run_migration(db_path: str):
                     ALTER TABLE alliances 
                     ADD COLUMN requirements TEXT DEFAULT ''
                 """)
-            except:
+            except Exception:
                 pass
             
             try:
@@ -73,7 +73,7 @@ async def run_migration(db_path: str):
                     ALTER TABLE alliances 
                     ADD COLUMN completed_bookings INTEGER DEFAULT 0
                 """)
-            except:
+            except Exception:
                 pass
             
             try:
@@ -81,7 +81,7 @@ async def run_migration(db_path: str):
                     ALTER TABLE alliances 
                     ADD COLUMN alliance_rank INTEGER DEFAULT 0
                 """)
-            except:
+            except Exception:
                 pass
             
             # 4. إنشاء جدول alliance_members
