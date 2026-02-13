@@ -1,0 +1,7 @@
+# Discord Bot Requirements for Appointment Scheduling System
+discord.py>=2.3.0
+aiosqlite>=0.19.0
+python-dotenv>=1.0.0
+pytz>=2024.1
+APScheduler>=3.10.0
+pandas>=2.2.0
