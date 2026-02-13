@@ -12,6 +12,7 @@ from database import db
 from database.models import Booking
 from utils import validators, embeds, datetime_helper, permissions
 from utils.ui_components import create_colored_embed
+from utils.translator import translator
 from config import config
 
 logger = logging.getLogger('bookings')
@@ -534,30 +535,49 @@ class BookingsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    @app_commands.command(name='حجز', description='📝 إنشاء حجز جديد')
+    @app_commands.command(name='حجز', description='📝 إنشاء حجز جديد - استخدم /start للواجهة التفاعلية')
     async def book(self, interaction: discord.Interaction):
-        """إنشاء حجز جديد"""
-        view = BookingTypeView(self)
-        embed = embeds.create_info_embed(
-            "إنشاء حجز جديد",
-            "اختر نوع الحجز من القائمة أدناه:\n\n"
-            "🏗️ **البناء** - حجز موعد للبناء\n"
-            "🔬 **الأبحاث** - حجز موعد للأبحاث\n"
-            "⚔️ **التدريب** - حجز موعد للتدريب"
+        """إنشاء حجز جديد - توجيه للقائمة الرئيسية"""
+        from cogs.main_menu import MainMenuView
+        from utils.translator import get_text
+        
+        user_id = str(interaction.user.id)
+        await translator.load_user_language_from_db(db, user_id)
+        
+        is_admin = permissions.is_admin(interaction.user)
+        view = MainMenuView(user_id, is_admin)
+        
+        embed = create_colored_embed(
+            "💡 استخدم الواجهة التفاعلية",
+            "✨ الآن يمكنك استخدام الواجهة التفاعلية الجديدة!\n\n"
+            "👇 اضغط على زر **📅 حجز موعد** من القائمة أدناه\n"
+            "أو استخدم الأمر `/start` للوصول السريع",
+            'info'
         )
+        
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
-    @app_commands.command(name='مواعيدي', description='📅 عرض حجوزاتك')
+    @app_commands.command(name='مواعيدي', description='📅 عرض حجوزاتك - استخدم /start للواجهة التفاعلية')
     async def my_bookings(self, interaction: discord.Interaction):
         """عرض حجوزات المستخدم"""
         await interaction.response.defer(ephemeral=True)
         
         user = await db.get_user_by_discord_id(str(interaction.user.id))
         if not user:
-            await interaction.followup.send(
-                embed=create_colored_embed("لا توجد بيانات", "ليس لديك أي حجوزات بعد.", 'info'),
-                ephemeral=True
+            # توجيه للقائمة الرئيسية
+            from cogs.main_menu import MainMenuView
+            user_id = str(interaction.user.id)
+            await translator.load_user_language_from_db(db, user_id)
+            is_admin = permissions.is_admin(interaction.user)
+            view = MainMenuView(user_id, is_admin)
+            
+            embed = create_colored_embed(
+                "💡 مرحباً بك!",
+                "✨ استخدم الواجهة التفاعلية لإدارة حجوزاتك\n\n"
+                "👇 اضغط على **📅 حجز موعد** لإنشاء حجز جديد",
+                'info'
             )
+            await interaction.followup.send(embed=embed, view=view, ephemeral=True)
             return
         
         bookings = await db.get_user_bookings(user.user_id, 'active')
@@ -575,55 +595,31 @@ class BookingsCog(commands.Cog):
         
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
     
-    @app_commands.command(name='إلغاء', description='❌ إلغاء حجز')
+    @app_commands.command(name='إلغاء', description='❌ إلغاء حجز - استخدم /start ثم اضغط مواعيدي')
     @app_commands.describe(booking_id='رقم الحجز المراد إلغاؤه')
     async def cancel(self, interaction: discord.Interaction, booking_id: int):
-        """إلغاء حجز"""
-        await interaction.response.defer(ephemeral=True)
+        """إلغاء حجز - توجيه للقائمة التفاعلية"""
+        from cogs.main_menu import MainMenuView
+        from utils.translator import get_text
         
-        booking = await db.get_booking(booking_id)
-        if not booking:
-            await interaction.followup.send(
-                embed=embeds.create_error_embed("خطأ", f"لم يتم العثور على الحجز #{booking_id}"),
-                ephemeral=True
-            )
-            return
+        user_id = str(interaction.user.id)
+        await translator.load_user_language_from_db(db, user_id)
         
-        # التحقق من الصلاحيات
-        if not permissions.can_manage_booking(interaction.user, booking.created_by):
-            await interaction.followup.send(
-                embed=embeds.create_error_embed("خطأ", "ليس لديك صلاحية لإلغاء هذا الحجز"),
-                ephemeral=True
-            )
-            return
+        is_admin = permissions.is_admin(interaction.user)
+        view = MainMenuView(user_id, is_admin)
         
-        if booking.status != 'active':
-            await interaction.followup.send(
-                embed=embeds.create_error_embed("خطأ", "هذا الحجز غير نشط"),
-                ephemeral=True
-            )
-            return
-        
-        # إلغاء الحجز
-        await db.cancel_booking(booking_id, "تم الإلغاء بواسطة المستخدم")
-        await db.update_user_points(booking.user_id, config.POINTS_CANCELLED)
-        await db.update_user_stats(booking.user_id, 'cancelled')
-        
-        await db.log_action(
-            'booking_cancelled',
-            f"تم إلغاء الحجز #{booking_id}",
-            str(interaction.user.id),
-            booking_id
+        embed = create_colored_embed(
+            "💡 استخدم الواجهة التفاعلية",
+            f"✨ الآن يمكنك إدارة حجوزاتك من الواجهة التفاعلية!\n\n"
+            f"👇 اضغط على زر **📋 مواعيدي** من القائمة أدناه\n"
+            f"ثم اضغط على **❌ إلغاء** بجانب الحجز #{booking_id}\n\n"
+            f"أو استخدم الأمر `/start` للوصول السريع",
+            'info'
         )
         
-        logger.info(f"تم إلغاء الحجز #{booking_id} بواسطة {interaction.user.name}")
-        
-        await interaction.followup.send(
-            embed=embeds.create_success_embed("تم الإلغاء", f"تم إلغاء الحجز #{booking_id} بنجاح"),
-            ephemeral=True
-        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
-    @app_commands.command(name='جدول', description='📊 عرض جدول المواعيد')
+    @app_commands.command(name='جدول', description='📊 عرض جدول المواعيد - استخدم /start ثم اضغط جدول المواعيد')
     @app_commands.describe(نوع='نوع الحجز: building, research, training')
     @app_commands.choices(نوع=[
         app_commands.Choice(name='🏗️ البناء', value='building'),
@@ -632,27 +628,31 @@ class BookingsCog(commands.Cog):
         app_commands.Choice(name='📅 الكل', value='all')
     ])
     async def schedule(self, interaction: discord.Interaction, نوع: str = 'all'):
-        """عرض جدول المواعيد"""
-        await interaction.response.defer()
+        """عرض جدول المواعيد - توجيه للقائمة التفاعلية"""
+        from cogs.main_menu import MainMenuView
+        from utils.translator import get_text
         
-        if نوع == 'all':
-            bookings = await db.get_all_active_bookings()
-            title = "📊 جدول المواعيد - الكل"
-        else:
-            bookings = await db.get_bookings_by_type(نوع, 'active')
+        user_id = str(interaction.user.id)
+        await translator.load_user_language_from_db(db, user_id)
+        
+        is_admin = permissions.is_admin(interaction.user)
+        view = MainMenuView(user_id, is_admin)
+        
+        booking_name = "الكل"
+        if نوع != 'all':
             booking_info = config.BOOKING_TYPES.get(نوع, {})
-            emoji = booking_info.get('emoji', '📅')
-            name = booking_info.get('name', نوع)
-            title = f"{emoji} جدول المواعيد - {name}"
+            booking_name = booking_info.get('name', نوع)
         
-        if not bookings:
-            await interaction.followup.send(
-                embed=embeds.create_info_embed("لا توجد مواعيد", "لا توجد حجوزات نشطة حالياً.")
-            )
-            return
+        embed = create_colored_embed(
+            "💡 استخدم الواجهة التفاعلية",
+            f"✨ الآن يمكنك عرض جدول المواعيد من الواجهة التفاعلية!\n\n"
+            f"👇 اضغط على زر **📊 جدول المواعيد** من القائمة أدناه\n"
+            f"لعرض مواعيد: {booking_name}\n\n"
+            f"أو استخدم الأمر `/start` للوصول السريع",
+            'info'
+        )
         
-        embed = embeds.create_bookings_list_embed(bookings, title)
-        await interaction.followup.send(embed=embed)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 async def setup(bot):
     """إعداد الـ Cog"""

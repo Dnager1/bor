@@ -8,6 +8,9 @@ import logging
 
 from database import db
 from utils import embeds
+from utils.ui_components import create_colored_embed
+from utils.translator import translator
+from utils import permissions
 from config import config
 
 logger = logging.getLogger('stats')
@@ -18,7 +21,7 @@ class StatsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    @app_commands.command(name='mystats', description='📊 عرض إحصائياتك')
+    @app_commands.command(name='mystats', description='📊 عرض إحصائياتك - استخدم /start ثم اضغط إحصائياتي')
     async def my_stats(self, interaction: discord.Interaction):
         """عرض إحصائيات المستخدم"""
         await interaction.response.defer(ephemeral=True)
@@ -43,7 +46,7 @@ class StatsCog(commands.Cog):
         
         await interaction.followup.send(embed=embed, ephemeral=True)
     
-    @app_commands.command(name='leaderboard', description='🏆 لوحة المتصدرين')
+    @app_commands.command(name='leaderboard', description='🏆 لوحة المتصدرين - استخدم /start ثم اضغط المتصدرون')
     @app_commands.describe(عدد='عدد اللاعبين (1-50)')
     async def leaderboard(self, interaction: discord.Interaction, عدد: int = 10):
         """عرض لوحة المتصدرين"""
@@ -62,78 +65,29 @@ class StatsCog(commands.Cog):
         embed = embeds.create_leaderboard_embed(top_users)
         await interaction.followup.send(embed=embed)
     
-    @app_commands.command(name='complete', description='✅ تأكيد إكمال حجز')
+    @app_commands.command(name='complete', description='✅ تأكيد إكمال حجز - استخدم /start ثم مواعيدي ثم إكمال')
     @app_commands.describe(booking_id='رقم الحجز')
     async def complete_booking(self, interaction: discord.Interaction, booking_id: int):
-        """تأكيد إكمال حجز"""
-        await interaction.response.defer(ephemeral=True)
+        """تأكيد إكمال حجز - توجيه للواجهة التفاعلية"""
+        from cogs.main_menu import MainMenuView
+        from utils.translator import get_text
         
-        booking = await db.get_booking(booking_id)
-        if not booking:
-            await interaction.followup.send(
-                embed=embeds.create_error_embed("خطأ", f"لم يتم العثور على الحجز #{booking_id}"),
-                ephemeral=True
-            )
-            return
+        user_id = str(interaction.user.id)
+        await translator.load_user_language_from_db(db, user_id)
         
-        # التحقق من الصلاحيات
-        from utils.permissions import permissions
-        if not permissions.can_manage_booking(interaction.user, booking.created_by):
-            await interaction.followup.send(
-                embed=embeds.create_error_embed("خطأ", "ليس لديك صلاحية لإدارة هذا الحجز"),
-                ephemeral=True
-            )
-            return
+        is_admin = permissions.is_admin(interaction.user)
+        view = MainMenuView(user_id, is_admin)
         
-        if booking.status != 'active':
-            await interaction.followup.send(
-                embed=embeds.create_error_embed("خطأ", "هذا الحجز غير نشط"),
-                ephemeral=True
-            )
-            return
-        
-        # تحديث الحجز
-        await db.complete_booking(booking_id)
-        
-        # حساب النقاط
-        points = config.POINTS_COMPLETED
-        
-        # نقاط إضافية للالتزام بالموعد
-        from utils.datetime_helper import datetime_helper
-        if not datetime_helper.is_past(booking.scheduled_time):
-            points += config.POINTS_ON_TIME
-        
-        await db.update_user_points(booking.user_id, points)
-        await db.update_user_stats(booking.user_id, 'completed')
-        
-        # التحقق من الإنجازات
-        user = await db.get_user_by_discord_id(booking.created_by)
-        if user:
-            # إنجاز 100 حجز
-            if user.completed_bookings + 1 >= 100:
-                await db.award_achievement(
-                    user.user_id,
-                    'perfect_player',
-                    config.ACHIEVEMENTS['perfect_player']['name']
-                )
-        
-        await db.log_action(
-            'booking_completed',
-            f"تم إكمال الحجز #{booking_id}",
-            str(interaction.user.id),
-            booking_id,
-            f"النقاط المكتسبة: {points}"
+        embed = create_colored_embed(
+            "💡 استخدم الواجهة التفاعلية",
+            f"✨ الآن يمكنك إكمال حجوزاتك من الواجهة التفاعلية!\n\n"
+            f"👇 اضغط على زر **📋 مواعيدي** من القائمة أدناه\n"
+            f"ثم اضغط على **✅ إكمال** بجانب الحجز #{booking_id}\n\n"
+            f"أو استخدم الأمر `/start` للوصول السريع",
+            'info'
         )
         
-        await interaction.followup.send(
-            embed=embeds.create_success_embed(
-                "تم الإنجاز! 🎉",
-                f"تم تأكيد إكمال الحجز #{booking_id}\n⭐ حصلت على **{points}** نقطة!"
-            ),
-            ephemeral=True
-        )
-        
-        logger.info(f"تم إكمال الحجز #{booking_id} بواسطة {interaction.user.name}")
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 async def setup(bot):
     """إعداد الـ Cog"""
