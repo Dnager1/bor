@@ -52,16 +52,16 @@ class BookingModal(discord.ui.Modal, title='📝 إنشاء حجز جديد'):
         max_length=5
     )
     
-    details = discord.ui.TextInput(
-        label='تفاصيل إضافية (اختياري)',
-        placeholder='أضف أي ملاحظات...',
-        required=False,
-        style=discord.TextStyle.paragraph,
-        max_length=500
+    duration_days = discord.ui.TextInput(
+        label='عدد الأيام | Days Count',
+        placeholder='مثال: 3 (من 1 إلى 365 يوم)',
+        required=True,
+        max_length=3,
+        default='1'
     )
     
     def __init__(self, booking_type: str, cog):
-        super().__init__()
+        super().__init__(title='📝 إنشاء حجز جديد')
         self.booking_type = booking_type
         self.cog = cog
     
@@ -88,6 +88,28 @@ class BookingModal(discord.ui.Modal, title='📝 إنشاء حجز جديد'):
         valid, dt, error = validators.validate_datetime(self.date.value, self.time.value)
         if not valid:
             await interaction.followup.send(embed=embeds.create_error_embed("خطأ", error), ephemeral=True)
+            return
+        
+        # التحقق من عدد الأيام
+        try:
+            duration = int(self.duration_days.value)
+            if duration < 1 or duration > 365:
+                await interaction.followup.send(
+                    embed=embeds.create_error_embed(
+                        "خطأ في عدد الأيام",
+                        "يجب أن يكون عدد الأيام بين 1 و 365 يوماً"
+                    ),
+                    ephemeral=True
+                )
+                return
+        except ValueError:
+            await interaction.followup.send(
+                embed=embeds.create_error_embed(
+                    "خطأ في عدد الأيام",
+                    "يجب إدخال رقم صحيح لعدد الأيام"
+                ),
+                ephemeral=True
+            )
             return
         
         # الحصول على المستخدم أو إنشاؤه
@@ -131,7 +153,8 @@ class BookingModal(discord.ui.Modal, title='📝 إنشاء حجز جديد'):
             player_id=self.player_id.value,
             alliance_name=self.alliance_name.value,
             scheduled_time=dt,
-            details=self.details.value if self.details.value else '',
+            duration_days=duration,
+            details="",
             created_by=str(interaction.user.id)
         )
         
@@ -144,10 +167,10 @@ class BookingModal(discord.ui.Modal, title='📝 إنشاء حجز جديد'):
             f"تم إنشاء حجز جديد من نوع {self.booking_type}",
             str(interaction.user.id),
             booking_id,
-            f"اللاعب: {self.player_name.value}, الموعد: {dt}"
+            f"اللاعب: {self.player_name.value}, الموعد: {dt}, المدة: {duration} أيام"
         )
         
-        logger.info(f"حجز جديد #{booking_id} - {interaction.user.name} - {self.booking_type}")
+        logger.info(f"حجز جديد #{booking_id} - {interaction.user.name} - {self.booking_type} - {duration} أيام")
         
         # إرسال رسالة النجاح
         await interaction.followup.send(

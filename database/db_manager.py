@@ -103,11 +103,11 @@ class DatabaseManager:
         cursor = await self.execute(
             """INSERT INTO bookings 
                (user_id, booking_type, player_name, player_id, alliance_name, 
-                scheduled_time, details, created_by)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                scheduled_time, details, created_by, duration_days)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (booking.user_id, booking.booking_type, booking.player_name, 
              booking.player_id, booking.alliance_name, booking.scheduled_time,
-             booking.details, booking.created_by)
+             booking.details, booking.created_by, booking.duration_days)
         )
         return cursor.lastrowid
     
