@@ -19,6 +19,7 @@ class User:
     cancelled_bookings: int = 0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    language: str = 'ar'
 
 @dataclass
 class Booking:
@@ -41,6 +42,7 @@ class Booking:
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     created_by: str = ''
+    duration_days: int = 1
 
 @dataclass
 class Alliance:
@@ -53,6 +55,12 @@ class Alliance:
     total_bookings: int = 0
     total_points: int = 0
     created_at: Optional[datetime] = None
+    alliance_logo: str = '🏰'
+    alliance_type: str = 'public'
+    max_members: int = 50
+    requirements: str = ''
+    completed_bookings: int = 0
+    alliance_rank: int = 0
 
 @dataclass
 class Achievement:
@@ -72,4 +80,55 @@ class Log:
     booking_id: Optional[int] = None
     description: str = ''
     details: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+@dataclass
+class AllianceMember:
+    """نموذج عضو التحالف"""
+    member_id: Optional[int] = None
+    user_id: int = 0
+    alliance_id: int = 0
+    rank: str = 'member'
+    joined_at: Optional[datetime] = None
+    contribution_points: int = 0
+    activity_status: str = 'active'
+
+@dataclass
+class AllianceJoinRequest:
+    """نموذج طلب الانضمام للتحالف"""
+    request_id: Optional[int] = None
+    user_id: int = 0
+    alliance_id: int = 0
+    status: str = 'pending'
+    message: Optional[str] = None
+    created_at: Optional[datetime] = None
+    resolved_at: Optional[datetime] = None
+    resolved_by: Optional[int] = None
+
+@dataclass
+class AllianceChallenge:
+    """نموذج تحدي التحالف"""
+    challenge_id: Optional[int] = None
+    alliance1_id: int = 0
+    alliance2_id: Optional[int] = None
+    challenge_type: str = ''
+    title: str = ''
+    description: Optional[str] = None
+    target_value: int = 0
+    current_value: int = 0
+    reward: Optional[str] = None
+    status: str = 'active'
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+@dataclass
+class AllianceMessage:
+    """نموذج رسالة التحالف"""
+    message_id: Optional[int] = None
+    alliance_id: int = 0
+    user_id: int = 0
+    message_type: str = 'announcement'
+    title: str = ''
+    content: str = ''
     created_at: Optional[datetime] = None
