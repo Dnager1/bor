@@ -15,6 +15,9 @@ class Config:
     BOT_TOKEN: str = os.getenv('DISCORD_BOT_TOKEN', '')
     GUILD_ID: Optional[int] = int(os.getenv('GUILD_ID', 0)) if os.getenv('GUILD_ID') else None
     
+    # Owner Configuration
+    OWNER_ID: int = int(os.getenv('OWNER_ID', 1376784524016619551))
+    
     # Role IDs
     ADMIN_ROLE_ID: int = int(os.getenv('ADMIN_ROLE_ID', 0))
     MODERATOR_ROLE_ID: int = int(os.getenv('MODERATOR_ROLE_ID', 0))
