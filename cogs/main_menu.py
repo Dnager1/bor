@@ -342,10 +342,14 @@ class MainMenuCog(commands.Cog):
             )
             return
         
-        await interaction.response.send_message(
-            "🏗️ لوحة تحكم الأدمن المتقدمة قيد التطوير...",
-            ephemeral=True
-        )
+        cog = self.bot.get_cog('AdminPanelCog')
+        if cog:
+            await cog.admin_panel(interaction)
+        else:
+            await interaction.response.send_message(
+                "🏗️ لوحة تحكم الأدمن المتقدمة قيد التطوير...",
+                ephemeral=True
+            )
     
     async def _handle_language(self, interaction: discord.Interaction):
         """معالجة زر اللغة"""
