@@ -64,12 +64,12 @@ class HelpCog(commands.Cog):
     
     @app_commands.command(name='menu', description='📖 Main Menu - القائمة الرئيسية')
     async def menu(self, interaction: discord.Interaction):
-        """Same as /start"""
+        """Main menu - same as /start command | القائمة الرئيسية"""
         await self.start(interaction)
     
     @app_commands.command(name='help', description='❓ Full Help Guide - دليل المساعدة')
     async def help(self, interaction: discord.Interaction):
-        """Complete help guide"""
+        """Complete help guide - shown privately (ephemeral) to avoid channel clutter"""
         embed = discord.Embed(
             title="📖 Complete Help Guide",
             description="Full guide for using the bot",
