@@ -74,6 +74,7 @@ class BookingBot(commands.Bot):
             'cogs.admin',
             'cogs.stats',
             'cogs.alliance',
+            'cogs.alliance_advanced',
             'cogs.help'
         ]
         

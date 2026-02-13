@@ -324,10 +324,14 @@ class MainMenuCog(commands.Cog):
     
     async def _handle_alliance(self, interaction: discord.Interaction):
         """معالجة زر التحالفات"""
-        await interaction.response.send_message(
-            "🏗️ نظام التحالفات المتقدم قيد التطوير...",
-            ephemeral=True
-        )
+        cog = self.bot.get_cog('AllianceAdvancedCog')
+        if cog:
+            await cog.alliances_menu(interaction)
+        else:
+            await interaction.response.send_message(
+                "🏗️ نظام التحالفات المتقدم قيد التطوير...",
+                ephemeral=True
+            )
     
     async def _handle_admin(self, interaction: discord.Interaction):
         """معالجة زر الأدمن"""
