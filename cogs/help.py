@@ -1,139 +1,146 @@
 """
-نظام المساعدة - Help Cog
-Updated for button-based interface
+Help System - نظام المساعدة
+Complete with /start, /menu, and /help commands
 """
 import discord
 from discord import app_commands
 from discord.ext import commands
 from config import config
-from utils.ui_components import create_colored_embed
 
 class HelpCog(commands.Cog):
-    """نظام المساعدة"""
+    """Help System"""
     
     def __init__(self, bot):
         self.bot = bot
     
-    @app_commands.command(name='help', description='❓ دليل استخدام البوت - الواجهة التفاعلية الجديدة')
-    async def help(self, interaction: discord.Interaction):
-        """دليل المساعدة - النظام الجديد بالأزرار"""
+    @app_commands.command(name='start', description='📖 Main Menu - القائمة الرئيسية')
+    async def start(self, interaction: discord.Interaction):
+        """Main menu"""
         embed = discord.Embed(
-            title="📖 دليل استخدام بوت مواعيد النجاة في الصقيع",
-            description="✨ **البوت الآن يعمل بالكامل بواجهة أزرار تفاعلية!**\n\nاستخدم `/start` أو `/menu` للوصول للقائمة الرئيسية",
+            title="📖 Main Menu - القائمة الرئيسية",
+            description="**Welcome to Whiteout Survival Booking Bot!**\n\nمرحباً بك في بوت المواعيد!",
             color=0x3498db
         )
         
-        # البدء السريع
         embed.add_field(
-            name="🚀 البدء السريع",
+            name="📅 Bookings - الحجوزات",
             value=(
-                "1. اكتب `/start` لفتح القائمة الرئيسية\n"
-                "2. اضغط على الزر المناسب من القائمة\n"
-                "3. اتبع التعليمات البسيطة!"
+                "`/حجز` - Create new booking | إنشاء حجز\n"
+                "`/مواعيدي` - View bookings | عرض الحجوزات\n"
+                "`/إلغاء [id]` - Cancel | إلغاء حجز\n"
+                "`/جدول [type]` - Schedule | الجدول"
             ),
             inline=False
         )
         
-        # القائمة الرئيسية
         embed.add_field(
-            name="📋 القائمة الرئيسية",
+            name="📊 Statistics - الإحصائيات",
             value=(
-                "📅 **حجز موعد** - إنشاء حجز جديد\n"
-                "📋 **مواعيدي** - عرض وإدارة حجوزاتك\n"
-                "📊 **جدول المواعيد** - عرض جميع المواعيد\n"
-                "📈 **إحصائياتي** - نقاطك وإنجازاتك\n"
-                "🏆 **المتصدرون** - أفضل اللاعبين\n"
-                "🤝 **التحالفات** - إدارة تحالفك"
+                "`/mystats` - Your stats | إحصائياتك\n"
+                "`/leaderboard` - Top players | المتصدرون\n"
+                "`/complete [id]` - Complete | إكمال"
             ),
             inline=False
         )
         
-        # إدارة الحجوزات
         embed.add_field(
-            name="🎯 إدارة الحجوزات",
+            name="🤝 Alliances - التحالفات",
             value=(
-                "• **إنشاء حجز**: من القائمة الرئيسية\n"
-                "• **عرض حجوزاتك**: زر مواعيدي\n"
-                "• **إكمال حجز**: زر ✅ بجانب الحجز\n"
-                "• **إلغاء حجز**: زر ❌ بجانب الحجز\n"
-                "• كل حجز له أزرار إجراء خاصة به!"
+                "`/alliance create` - Create | إنشاء\n"
+                "`/alliance join` - Join | انضمام\n"
+                "`/alliance info` - Info | معلومات"
             ),
             inline=False
         )
         
-        # التحالفات
         embed.add_field(
-            name="🏰 التحالفات",
+            name="❓ Help - المساعدة",
+            value="`/help` - Full guide | الدليل الكامل",
+            inline=False
+        )
+        
+        embed.set_footer(text=f"Requested by {interaction.user.name}")
+        await interaction.response.send_message(embed=embed)
+    
+    @app_commands.command(name='menu', description='📖 Main Menu - القائمة الرئيسية')
+    async def menu(self, interaction: discord.Interaction):
+        """Same as /start"""
+        await self.start(interaction)
+    
+    @app_commands.command(name='help', description='❓ Full Help Guide - دليل المساعدة')
+    async def help(self, interaction: discord.Interaction):
+        """Complete help guide"""
+        embed = discord.Embed(
+            title="📖 Complete Help Guide",
+            description="Full guide for using the bot",
+            color=0x3498db
+        )
+        
+        embed.add_field(
+            name="🚀 Quick Start",
             value=(
-                "📍 اضغط زر **🤝 التحالفات** من القائمة:\n"
-                "• 🏰 إنشاء تحالف جديد\n"
-                "• 🔍 البحث عن تحالف\n"
-                "• 📜 معلومات تحالفك\n"
-                "• 🚪 مغادرة التحالف"
+                "1. Type `/start` or `/menu`\n"
+                "2. Choose a command\n"
+                "3. Follow instructions!"
             ),
             inline=False
         )
         
-        # نظام النقاط
         embed.add_field(
-            name="⭐ نظام النقاط",
+            name="📅 Booking Commands",
             value=(
-                f"• +{config.POINTS_COMPLETED} نقطة لكل حجز منجز\n"
-                f"• +{config.POINTS_ON_TIME} نقطة إضافية للالتزام بالموعد\n"
-                f"• {config.POINTS_CANCELLED} نقطة للحجوزات الملغاة"
+                "`/حجز` - Create new booking\n"
+                "`/مواعيدي` - View your bookings\n"
+                "`/إلغاء [id]` - Cancel booking\n"
+                "`/جدول [type]` - View schedule\n"
+                "`/complete [id]` - Mark as complete"
             ),
             inline=False
         )
         
-        # أنواع الحجوزات
         embed.add_field(
-            name="📋 أنواع الحجوزات",
+            name="📊 Statistics",
             value=(
-                "🏗️ **البناء** - مواعيد البناء والتطوير\n"
-                "🔬 **الأبحاث** - مواعيد الأبحاث والتقنيات\n"
-                "⚔️ **التدريب** - مواعيد تدريب القوات"
+                "`/mystats` - Your personal stats\n"
+                "`/leaderboard [count]` - Top players"
             ),
             inline=False
         )
         
-        # الميزات الجديدة
         embed.add_field(
-            name="✨ الميزات الجديدة",
+            name="🤝 Alliances",
             value=(
-                "🎨 واجهة أزرار تفاعلية\n"
-                "⚡ إجراءات سريعة لكل حجز\n"
-                "📄 تنقل بين الصفحات\n"
-                "🔄 تحديث تلقائي للقوائم\n"
-                "🌐 دعم لغتين (عربي/إنجليزي)\n"
-                "🏆 نظام تحالفات متقدم"
+                "`/alliance create [name]` - Create alliance\n"
+                "`/alliance join [name]` - Join alliance\n"
+                "`/alliance leave` - Leave alliance\n"
+                "`/alliance info [name]` - Alliance info"
             ),
             inline=False
         )
         
-        # للمشرفين
         embed.add_field(
-            name="⚙️ للمشرفين فقط",
+            name="⚙️ Admin (Admins Only)",
             value=(
-                "🛡️ لوحة تحكم الأدمن المتقدمة\n"
-                "استخدم زر **⚙️ الإدارة** من القائمة"
+                "`/admin stats` - Bot statistics\n"
+                "`/admin export` - Export data\n"
+                "`/admin backup` - Create backup"
             ),
             inline=False
         )
         
-        # الأوامر القديمة
         embed.add_field(
-            name="ℹ️ ملاحظة",
+            name="⭐ Points System",
             value=(
-                "الأوامر القديمة مثل `/حجز` و `/مواعيدي` ما زالت تعمل\n"
-                "لكننا ننصح باستخدام `/start` والأزرار التفاعلية!"
+                f"+{config.POINTS_COMPLETED} points per completed booking\n"
+                f"+{config.POINTS_ON_TIME} bonus for on-time\n"
+                f"{config.POINTS_CANCELLED} penalty for cancellation"
             ),
             inline=False
         )
         
-        embed.set_footer(text="💡 اضغط /start الآن للبدء!")
-        
+        embed.set_footer(text="Use /start for quick menu")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot):
-    """إعداد الـ Cog"""
+    """Setup cog"""
     await bot.add_cog(HelpCog(bot))
