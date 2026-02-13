@@ -73,6 +73,7 @@ class BookingBot(commands.Bot):
             'cogs.bookings',
             'cogs.admin',
             'cogs.admin_panel',
+            'cogs.permissions_manager',
             'cogs.stats',
             'cogs.alliance',
             'cogs.alliance_advanced',
