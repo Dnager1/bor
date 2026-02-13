@@ -1,5 +1,6 @@
 """
 نظام الحجوزات - Bookings Cog
+Enhanced with action buttons for all interactions
 """
 import discord
 from discord import app_commands
@@ -10,6 +11,7 @@ import logging
 from database import db
 from database.models import Booking
 from utils import validators, embeds, datetime_helper, permissions
+from utils.ui_components import create_colored_embed
 from config import config
 
 logger = logging.getLogger('bookings')
@@ -232,13 +234,50 @@ class BookingActionButtons(discord.ui.View):
         self.booking_id = booking_id
         self.user_id = user_id
     
-    @discord.ui.button(label='إلغاء الحجز', style=discord.ButtonStyle.danger, emoji='❌')
+    @discord.ui.button(label='✅ إكمال', style=discord.ButtonStyle.success, emoji='✅', row=0)
+    async def complete_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """زر إكمال الحجز"""
+        # التحقق من الصلاحيات
+        if not permissions.can_manage_booking(interaction.user, self.user_id):
+            await interaction.response.send_message(
+                embed=create_colored_embed("خطأ", "ليس لديك صلاحية لإدارة هذا الحجز", 'error'),
+                ephemeral=True
+            )
+            return
+        
+        # إكمال الحجز
+        await db.complete_booking(self.booking_id)
+        
+        # تحديث النقاط
+        booking = await db.get_booking(self.booking_id)
+        if booking:
+            await db.update_user_points(booking.user_id, config.POINTS_COMPLETED)
+            await db.update_user_stats(booking.user_id, 'completed')
+        
+        await db.log_action(
+            'booking_completed',
+            f"تم إكمال الحجز #{self.booking_id}",
+            str(interaction.user.id),
+            self.booking_id
+        )
+        
+        await interaction.response.send_message(
+            embed=create_colored_embed("✅ تم الإكمال", f"تم إكمال الحجز #{self.booking_id} بنجاح!", 'success'),
+            ephemeral=True
+        )
+        
+        # تعطيل الأزرار
+        for item in self.children:
+            item.disabled = True
+        await interaction.message.edit(view=self)
+    
+    @discord.ui.button(label='❌ إلغاء', style=discord.ButtonStyle.danger, emoji='❌', row=0)
     async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """زر إلغاء الحجز"""
         # التحقق من الصلاحيات
         if not permissions.can_manage_booking(interaction.user, self.user_id):
             await interaction.response.send_message(
-                embed=embeds.create_error_embed("خطأ", "ليس لديك صلاحية لإلغاء هذا الحجز"),
+                embed=create_colored_embed("خطأ", "ليس لديك صلاحية لإلغاء هذا الحجز", 'error'),
                 ephemeral=True
             )
             return
@@ -260,7 +299,7 @@ class BookingActionButtons(discord.ui.View):
         )
         
         await interaction.response.send_message(
-            embed=embeds.create_success_embed("تم الإلغاء", f"تم إلغاء الحجز #{self.booking_id} بنجاح"),
+            embed=create_colored_embed("تم الإلغاء", f"تم إلغاء الحجز #{self.booking_id} بنجاح", 'success'),
             ephemeral=True
         )
         
@@ -268,6 +307,226 @@ class BookingActionButtons(discord.ui.View):
         for item in self.children:
             item.disabled = True
         await interaction.message.edit(view=self)
+
+class BookingsListView(discord.ui.View):
+    """عرض قائمة الحجوزات مع أزرار التنقل والإجراءات"""
+    
+    def __init__(self, bookings: list, user_id: str, title: str, page: int = 0):
+        super().__init__(timeout=300)
+        self.bookings = bookings
+        self.user_id = user_id
+        self.title = title
+        self.page = page
+        self.per_page = 3  # عرض 3 حجوزات في كل صفحة
+        self.total_pages = (len(bookings) + self.per_page - 1) // self.per_page if bookings else 1
+        
+        self._update_buttons()
+    
+    def _update_buttons(self):
+        """تحديث أزرار التنقل"""
+        self.clear_items()
+        
+        # أزرار التنقل بين الصفحات
+        if self.total_pages > 1:
+            prev_button = discord.ui.Button(
+                label="⬅️ السابق",
+                style=discord.ButtonStyle.secondary,
+                disabled=(self.page == 0),
+                custom_id='prev_page'
+            )
+            prev_button.callback = self.prev_page
+            self.add_item(prev_button)
+            
+            page_button = discord.ui.Button(
+                label=f"صفحة {self.page + 1}/{self.total_pages}",
+                style=discord.ButtonStyle.secondary,
+                disabled=True
+            )
+            self.add_item(page_button)
+            
+            next_button = discord.ui.Button(
+                label="➡️ التالي",
+                style=discord.ButtonStyle.secondary,
+                disabled=(self.page >= self.total_pages - 1),
+                custom_id='next_page'
+            )
+            next_button.callback = self.next_page
+            self.add_item(next_button)
+        
+        # زر العودة للقائمة الرئيسية
+        back_button = discord.ui.Button(
+            label="🔙 القائمة الرئيسية",
+            style=discord.ButtonStyle.secondary,
+            row=1
+        )
+        back_button.callback = self.back_to_menu
+        self.add_item(back_button)
+        
+        # إضافة أزرار الإجراءات لكل حجز في الصفحة الحالية
+        start = self.page * self.per_page
+        end = min(start + self.per_page, len(self.bookings))
+        page_bookings = self.bookings[start:end]
+        
+        for i, booking in enumerate(page_bookings):
+            complete_btn = discord.ui.Button(
+                label=f"✅ إكمال #{booking.booking_id}",
+                style=discord.ButtonStyle.success,
+                custom_id=f'complete_{booking.booking_id}',
+                row=2 + i
+            )
+            complete_btn.callback = lambda inter, b=booking: self.complete_booking(inter, b)
+            self.add_item(complete_btn)
+            
+            cancel_btn = discord.ui.Button(
+                label=f"❌ إلغاء #{booking.booking_id}",
+                style=discord.ButtonStyle.danger,
+                custom_id=f'cancel_{booking.booking_id}',
+                row=2 + i
+            )
+            cancel_btn.callback = lambda inter, b=booking: self.cancel_booking(inter, b)
+            self.add_item(cancel_btn)
+    
+    async def complete_booking(self, interaction: discord.Interaction, booking):
+        """إكمال حجز"""
+        if not permissions.can_manage_booking(interaction.user, booking.created_by):
+            await interaction.response.send_message(
+                embed=create_colored_embed("خطأ", "ليس لديك صلاحية لإدارة هذا الحجز", 'error'),
+                ephemeral=True
+            )
+            return
+        
+        await db.complete_booking(booking.booking_id)
+        await db.update_user_points(booking.user_id, config.POINTS_COMPLETED)
+        await db.update_user_stats(booking.user_id, 'completed')
+        
+        await interaction.response.send_message(
+            embed=create_colored_embed("✅ تم الإكمال", f"تم إكمال الحجز #{booking.booking_id} بنجاح!", 'success'),
+            ephemeral=True
+        )
+        
+        # إعادة تحميل القائمة
+        await self.refresh_list(interaction)
+    
+    async def cancel_booking(self, interaction: discord.Interaction, booking):
+        """إلغاء حجز"""
+        if not permissions.can_manage_booking(interaction.user, booking.created_by):
+            await interaction.response.send_message(
+                embed=create_colored_embed("خطأ", "ليس لديك صلاحية لإلغاء هذا الحجز", 'error'),
+                ephemeral=True
+            )
+            return
+        
+        await db.cancel_booking(booking.booking_id, "تم الإلغاء بواسطة المستخدم")
+        await db.update_user_points(booking.user_id, config.POINTS_CANCELLED)
+        await db.update_user_stats(booking.user_id, 'cancelled')
+        
+        await interaction.response.send_message(
+            embed=create_colored_embed("تم الإلغاء", f"تم إلغاء الحجز #{booking.booking_id}", 'success'),
+            ephemeral=True
+        )
+        
+        # إعادة تحميل القائمة
+        await self.refresh_list(interaction)
+    
+    async def refresh_list(self, interaction: discord.Interaction):
+        """إعادة تحميل قائمة الحجوزات"""
+        # إعادة جلب الحجوزات النشطة
+        user = await db.get_user_by_discord_id(self.user_id)
+        if user:
+            self.bookings = await db.get_user_bookings(user.user_id, 'active')
+            self.total_pages = (len(self.bookings) + self.per_page - 1) // self.per_page if self.bookings else 1
+            
+            if self.page >= self.total_pages:
+                self.page = max(0, self.total_pages - 1)
+            
+            self._update_buttons()
+            
+            embed = self.create_embed()
+            await interaction.message.edit(embed=embed, view=self)
+    
+    async def prev_page(self, interaction: discord.Interaction):
+        """الصفحة السابقة"""
+        if self.page > 0:
+            self.page -= 1
+            self._update_buttons()
+            embed = self.create_embed()
+            await interaction.response.edit_message(embed=embed, view=self)
+    
+    async def next_page(self, interaction: discord.Interaction):
+        """الصفحة التالية"""
+        if self.page < self.total_pages - 1:
+            self.page += 1
+            self._update_buttons()
+            embed = self.create_embed()
+            await interaction.response.edit_message(embed=embed, view=self)
+    
+    async def back_to_menu(self, interaction: discord.Interaction):
+        """العودة للقائمة الرئيسية"""
+        from cogs.main_menu import MainMenuView
+        from utils.translator import get_text
+        
+        is_admin = permissions.is_admin(interaction.user)
+        view = MainMenuView(self.user_id, is_admin)
+        
+        embed = create_colored_embed(
+            get_text(self.user_id, 'main_menu.title'),
+            get_text(self.user_id, 'main_menu.description'),
+            'info'
+        )
+        
+        await interaction.response.edit_message(embed=embed, view=view)
+    
+    def create_embed(self):
+        """إنشاء embed للصفحة الحالية"""
+        embed = discord.Embed(
+            title=self.title,
+            color=0x3498db,
+            timestamp=datetime.now()
+        )
+        
+        if not self.bookings:
+            embed.description = "📭 لا توجد حجوزات نشطة"
+            return embed
+        
+        start = self.page * self.per_page
+        end = min(start + self.per_page, len(self.bookings))
+        page_bookings = self.bookings[start:end]
+        
+        from utils.formatters import formatters
+        
+        for booking in page_bookings:
+            booking_info = config.BOOKING_TYPES.get(booking.booking_type, {})
+            emoji = booking_info.get('emoji', '📅')
+            type_name = booking_info.get('name', booking.booking_type)
+            
+            value = f"👤 {booking.player_name} | 🆔 {booking.player_id}\n"
+            value += f"🏰 {booking.alliance_name}\n"
+            value += f"⏰ {formatters.format_datetime(booking.scheduled_time)}\n"
+            value += f"📅 المدة: {booking.duration_days} يوم\n"
+            value += f"⏳ {formatters.format_time_remaining(booking.scheduled_time)}"
+            
+            embed.add_field(
+                name=f"{emoji} {type_name} - #{booking.booking_id}",
+                value=value,
+                inline=False
+            )
+        
+        if self.total_pages > 1:
+            embed.set_footer(text=f"صفحة {self.page + 1}/{self.total_pages} | المجموع: {len(self.bookings)}")
+        else:
+            embed.set_footer(text=f"المجموع: {len(self.bookings)}")
+        
+        return embed
+    
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """التحقق من المستخدم"""
+        if str(interaction.user.id) != self.user_id:
+            await interaction.response.send_message(
+                "❌ هذه القائمة ليست لك!",
+                ephemeral=True
+            )
+            return False
+        return True
 
 class BookingsCog(commands.Cog):
     """نظام الحجوزات"""
@@ -296,7 +555,7 @@ class BookingsCog(commands.Cog):
         user = await db.get_user_by_discord_id(str(interaction.user.id))
         if not user:
             await interaction.followup.send(
-                embed=embeds.create_info_embed("لا توجد بيانات", "ليس لديك أي حجوزات بعد."),
+                embed=create_colored_embed("لا توجد بيانات", "ليس لديك أي حجوزات بعد.", 'info'),
                 ephemeral=True
             )
             return
@@ -305,17 +564,16 @@ class BookingsCog(commands.Cog):
         
         if not bookings:
             await interaction.followup.send(
-                embed=embeds.create_info_embed("لا توجد حجوزات", "ليس لديك حجوزات نشطة حالياً."),
+                embed=create_colored_embed("لا توجد حجوزات", "ليس لديك حجوزات نشطة حالياً.", 'info'),
                 ephemeral=True
             )
             return
         
-        embed = embeds.create_bookings_list_embed(
-            bookings,
-            f"📅 حجوزاتك النشطة ({len(bookings)})"
-        )
+        # استخدام العرض الجديد مع الأزرار
+        view = BookingsListView(bookings, str(interaction.user.id), f"📅 حجوزاتك النشطة ({len(bookings)})")
+        embed = view.create_embed()
         
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
     
     @app_commands.command(name='إلغاء', description='❌ إلغاء حجز')
     @app_commands.describe(booking_id='رقم الحجز المراد إلغاؤه')
