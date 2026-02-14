@@ -3,7 +3,7 @@
 
 -- جدول المستخدمين
 CREATE TABLE IF NOT EXISTS users (
-    user_id INTEGER PRIMARY KEY,
+    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
     discord_id TEXT UNIQUE NOT NULL,
     username TEXT NOT NULL,
     player_id TEXT NOT NULL,
