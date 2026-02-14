@@ -92,3 +92,20 @@ class DateTimeHelper:
         return start, end
 
 datetime_helper = DateTimeHelper()
+
+# Module-level convenience functions for backward compatibility
+def get_timezone():
+    """Get configured timezone"""
+    return pytz.timezone(config.TIMEZONE)
+
+def get_now():
+    """Get current time with timezone"""
+    return DateTimeHelper.get_now()
+
+def is_past(dt):
+    """Check if datetime is in the past"""
+    return DateTimeHelper.is_past(dt)
+
+def get_time_until(dt):
+    """Get time remaining until datetime"""
+    return DateTimeHelper.get_time_until(dt)
