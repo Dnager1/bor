@@ -12,29 +12,10 @@ import asyncio
 
 from config import config
 from database import db
+from utils.advanced_logging import setup_advanced_logging
 
-# إعداد نظام السجلات
-os.makedirs(config.LOGS_DIR, exist_ok=True)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(f'{config.LOGS_DIR}/bot.log', encoding='utf-8'),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-
-# سجل منفصل للأخطاء
-error_logger = logging.getLogger('errors')
-error_handler = logging.FileHandler(f'{config.LOGS_DIR}/errors.log', encoding='utf-8')
-error_handler.setLevel(logging.ERROR)
-error_logger.addHandler(error_handler)
-
-# سجل منفصل للحجوزات
-bookings_logger = logging.getLogger('bookings')
-bookings_handler = logging.FileHandler(f'{config.LOGS_DIR}/bookings.log', encoding='utf-8')
-bookings_logger.addHandler(bookings_handler)
+# إعداد نظام السجلات المتقدم
+setup_advanced_logging(config.LOGS_DIR)
 
 logger = logging.getLogger('bot')
 
@@ -73,6 +54,7 @@ class BookingBot(commands.Bot):
             'cogs.reservations_system',
             'cogs.alliance_system',
             'cogs.management_system',
+            'cogs.help_system',
         ]
         
         for cog in cogs_to_load:
@@ -128,11 +110,11 @@ class BookingBot(commands.Bot):
     
     async def on_command_error(self, ctx, error):
         """معالجة أخطاء الأوامر"""
-        error_logger.error(f"خطأ في الأمر: {error}", exc_info=error)
+        logger.error(f"خطأ في الأمر: {error}", exc_info=error)
     
     async def on_error(self, event, *args, **kwargs):
         """معالجة الأخطاء العامة"""
-        error_logger.error(f"خطأ في الحدث {event}", exc_info=sys.exc_info())
+        logger.error(f"خطأ في الحدث {event}", exc_info=sys.exc_info())
 
 async def main():
     """الدالة الرئيسية"""
