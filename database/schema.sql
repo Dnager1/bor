@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     total_bookings INTEGER DEFAULT 0,
     completed_bookings INTEGER DEFAULT 0,
     cancelled_bookings INTEGER DEFAULT 0,
-    language TEXT DEFAULT 'ar',
+    language TEXT DEFAULT 'en' CHECK(language IN ('ar', 'en')),
     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS bookings (
 CREATE TABLE IF NOT EXISTS alliances (
     alliance_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
+    tag TEXT UNIQUE NOT NULL CHECK(length(tag) = 3),
     description TEXT,
     rules TEXT,
     leader_id INTEGER NOT NULL,
@@ -108,6 +109,8 @@ CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 CREATE INDEX IF NOT EXISTS idx_bookings_type ON bookings(booking_type);
 CREATE INDEX IF NOT EXISTS idx_users_discord_id ON users(discord_id);
 CREATE INDEX IF NOT EXISTS idx_users_alliance_id ON users(alliance_id);
+CREATE INDEX IF NOT EXISTS idx_users_language ON users(language);
 CREATE INDEX IF NOT EXISTS idx_logs_action_type ON logs(action_type);
 CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_achievements_user_id ON achievements(user_id);
+CREATE INDEX IF NOT EXISTS idx_alliances_tag ON alliances(tag);

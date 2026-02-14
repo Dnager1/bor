@@ -28,7 +28,7 @@ class Config:
     
     # Bot Settings
     MAX_ACTIVE_BOOKINGS: int = int(os.getenv('MAX_ACTIVE_BOOKINGS', 5))
-    LANGUAGE: str = os.getenv('LANGUAGE', 'ar')
+    LANGUAGE: str = os.getenv('LANGUAGE', 'EN').strip().lower()
     TIMEZONE: str = os.getenv('TIMEZONE', 'Asia/Riyadh')
     
     # Reminder Settings
@@ -70,6 +70,10 @@ class Config:
         if not cls.BOT_TOKEN:
             print("❌ خطأ: DISCORD_BOT_TOKEN غير موجود في ملف .env")
             return False
+
+        if cls.LANGUAGE not in {'en', 'ar'}:
+            print("⚠️ LANGUAGE غير صالح، سيتم استخدام EN")
+            cls.LANGUAGE = 'en'
         return True
 
 config = Config()

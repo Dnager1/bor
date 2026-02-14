@@ -129,10 +129,7 @@ class LanguageSelectView(discord.ui.View):
         try:
             user = await db.get_user_by_discord_id(self.user_id)
             if user:
-                await db.execute(
-                    "UPDATE users SET language = ? WHERE user_id = ?",
-                    (lang_code, user.user_id)
-                )
+                await db.set_user_language(self.user_id, lang_code)
         except Exception as e:
             logger.error(f"Error saving language: {e}")
         
@@ -143,7 +140,10 @@ class LanguageSelectView(discord.ui.View):
             'success'
         )
         
-        await interaction.response.edit_message(embed=embed, view=None)
+        if interaction.response.is_done():
+            await interaction.edit_original_response(embed=embed, view=None)
+        else:
+            await interaction.response.edit_message(embed=embed, view=None)
         
         # Reopen main menu after 1 second
         import asyncio
@@ -213,11 +213,67 @@ class MainControlPanelCog(commands.Cog):
     
     def __init__(self, bot):
         self.bot = bot
+
+    async def _safe_send(self, interaction: discord.Interaction, **kwargs):
+        if interaction.response.is_done():
+            return await interaction.followup.send(**kwargs)
+        return await interaction.response.send_message(**kwargs)
+
+    async def _safe_edit(self, interaction: discord.Interaction, **kwargs):
+        if interaction.response.is_done():
+            return await interaction.edit_original_response(**kwargs)
+        return await interaction.response.edit_message(**kwargs)
     
     @app_commands.command(name='start', description='📖 Open Main Control Panel | فتح لوحة التحكم الرئيسية')
     async def start(self, interaction: discord.Interaction):
         """Show main control panel"""
         await self._show_main_panel(interaction)
+
+    @app_commands.command(name='menu', description='📖 Open Main Menu')
+    async def menu(self, interaction: discord.Interaction):
+        """Alias for /start"""
+        await self._show_main_panel(interaction)
+
+    @app_commands.command(name='language', description='🌐 Change your language')
+    @app_commands.describe(language='Choose EN or AR')
+    @app_commands.choices(language=[
+        app_commands.Choice(name='English', value='en'),
+        app_commands.Choice(name='العربية', value='ar')
+    ])
+    async def language(self, interaction: discord.Interaction, language: app_commands.Choice[str]):
+        """Change user language directly from slash command"""
+        user_id = str(interaction.user.id)
+        from database import db
+
+        user = await db.get_user_by_discord_id(user_id)
+        if not user:
+            await db.get_or_create_user(user_id, interaction.user.name, user_id)
+
+        await db.set_user_language(user_id, language.value)
+        translator.set_user_language(user_id, language.value)
+
+        await self._show_main_panel(interaction)
+
+    @app_commands.command(name='stats', description='📊 Show bot statistics')
+    async def stats(self, interaction: discord.Interaction):
+        """Show global bot stats"""
+        user_id = str(interaction.user.id)
+        from database import db
+
+        await translator.load_user_language_from_db(db, user_id)
+        stats = await db.get_stats()
+
+        embed = discord.Embed(
+            title="📊 Bot Statistics",
+            color=discord.Color.blurple()
+        )
+        embed.add_field(name="Users", value=str(stats.get('total_users', 0)), inline=True)
+        embed.add_field(name="Alliances", value=str(stats.get('total_alliances', 0)), inline=True)
+        embed.add_field(name="Reservations", value=str(stats.get('total_bookings', 0)), inline=True)
+        embed.add_field(name="Active", value=str(stats.get('active_bookings', 0)), inline=True)
+        embed.add_field(name="Completed", value=str(stats.get('completed_bookings', 0)), inline=True)
+
+        await self._safe_send(interaction, embed=embed, ephemeral=True)
     
     async def _show_main_panel(self, interaction: discord.Interaction):
         """Display main control panel"""
@@ -241,7 +297,7 @@ class MainControlPanelCog(commands.Cog):
             'info'
         )
         
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await self._safe_send(interaction, embed=embed, view=view, ephemeral=True)
     
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
@@ -249,7 +305,7 @@ class MainControlPanelCog(commands.Cog):
         if interaction.type != discord.InteractionType.component:
             return
         
-        custom_id = interaction.data.get('custom_id', '')
+        custom_id = (interaction.data or {}).get('custom_id', '')
         
         # Only handle main control panel buttons
         if not custom_id.startswith('main_btn_'):
@@ -285,10 +341,7 @@ class MainControlPanelCog(commands.Cog):
         if cog:
             await cog.show_alliance_menu(interaction)
         else:
-            await interaction.response.send_message(
-                "🚧 Alliance system is being set up...",
-                ephemeral=True
-            )
+            await self._safe_send(interaction, content="🚧 Alliance system is being set up...", ephemeral=True)
     
     async def _handle_reservations(self, interaction: discord.Interaction):
         """Handle reservations button"""
@@ -298,10 +351,7 @@ class MainControlPanelCog(commands.Cog):
         if cog:
             await cog.show_reservations_menu(interaction)
         else:
-            await interaction.response.send_message(
-                "🚧 Reservations system is being set up...",
-                ephemeral=True
-            )
+            await self._safe_send(interaction, content="🚧 Reservations system is being set up...", ephemeral=True)
     
     async def _handle_management(self, interaction: discord.Interaction):
         """Handle management button"""
@@ -309,10 +359,7 @@ class MainControlPanelCog(commands.Cog):
         
         # Check permissions
         if not permissions.is_admin(interaction.user) and not permissions.is_owner(interaction.user):
-            await interaction.response.send_message(
-                get_text(user_id, 'admin.no_permission'),
-                ephemeral=True
-            )
+            await self._safe_send(interaction, content=get_text(user_id, 'admin.no_permission'), ephemeral=True)
             return
         
         from cogs.management_system import ManagementSystemCog
@@ -321,10 +368,7 @@ class MainControlPanelCog(commands.Cog):
         if cog:
             await cog.show_management_panel(interaction)
         else:
-            await interaction.response.send_message(
-                "🚧 Management panel is being set up...",
-                ephemeral=True
-            )
+            await self._safe_send(interaction, content="🚧 Management panel is being set up...", ephemeral=True)
     
     async def _handle_language(self, interaction: discord.Interaction):
         """Handle language button"""
@@ -337,7 +381,7 @@ class MainControlPanelCog(commands.Cog):
             'info'
         )
         
-        await interaction.response.edit_message(embed=embed, view=view)
+        await self._safe_edit(interaction, embed=embed, view=view)
     
     async def _handle_my_info(self, interaction: discord.Interaction):
         """Handle my info button"""
@@ -412,12 +456,13 @@ class MainControlPanelCog(commands.Cog):
             
             view = MyInfoView(user_id)
             
-            await interaction.response.edit_message(embed=embed, view=view)
+            await self._safe_edit(interaction, embed=embed, view=view)
             
         except Exception as e:
             logger.error(f"Error showing my info: {e}")
-            await interaction.response.send_message(
-                f"❌ Error: {str(e)}",
+            await self._safe_send(
+                interaction,
+                content=f"❌ Error: {str(e)}",
                 ephemeral=True
             )
 

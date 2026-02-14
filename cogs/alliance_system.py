@@ -81,6 +81,80 @@ class AllianceSystemCog(commands.Cog):
     
     def __init__(self, bot):
         self.bot = bot
+
+    async def _safe_send(self, interaction: discord.Interaction, **kwargs):
+        if interaction.response.is_done():
+            return await interaction.followup.send(**kwargs)
+        return await interaction.response.send_message(**kwargs)
+
+    async def _safe_edit(self, interaction: discord.Interaction, **kwargs):
+        if interaction.response.is_done():
+            return await interaction.edit_original_response(**kwargs)
+        return await interaction.response.edit_message(**kwargs)
+
+    @app_commands.command(name='alliance', description='🤝 Alliance actions')
+    @app_commands.describe(action='Action: menu/info/create/join/leave', name='Alliance name', tag='Alliance tag (3 chars)')
+    @app_commands.choices(action=[
+        app_commands.Choice(name='menu', value='menu'),
+        app_commands.Choice(name='info', value='info'),
+        app_commands.Choice(name='create', value='create'),
+        app_commands.Choice(name='join', value='join'),
+        app_commands.Choice(name='leave', value='leave'),
+    ])
+    async def alliance(self, interaction: discord.Interaction, action: app_commands.Choice[str], name: str = '', tag: str = ''):
+        """Alliance slash entry point"""
+        user_id = str(interaction.user.id)
+        await translator.load_user_language_from_db(db, user_id)
+
+        user = await db.get_user_by_discord_id(user_id)
+        if not user:
+            user = await db.get_or_create_user(user_id, interaction.user.name, user_id)
+
+        if action.value == 'menu':
+            return await self.show_alliance_menu(interaction)
+
+        if action.value == 'info':
+            return await self._show_alliance_info(interaction)
+
+        if action.value == 'create':
+            clean_tag = (tag or '').strip().upper()
+            if len(clean_tag) != 3:
+                return await self._safe_send(interaction, content='❌ TAG must be exactly 3 characters.', ephemeral=True)
+            if user.alliance_id:
+                return await self._safe_send(interaction, content=get_text(user_id, 'alliance.already_member'), ephemeral=True)
+            if not name.strip():
+                return await self._safe_send(interaction, content='❌ Please provide alliance name.', ephemeral=True)
+
+            try:
+                await db.create_alliance(name=name.strip(), tag=clean_tag, leader_id=user.user_id, description='')
+                return await self._safe_send(interaction, content=get_text(user_id, 'alliance.created_success'), ephemeral=True)
+            except Exception as e:
+                return await self._safe_send(interaction, content=f'❌ {e}', ephemeral=True)
+
+        if action.value == 'join':
+            clean_tag = (tag or '').strip().upper()
+            if len(clean_tag) != 3:
+                return await self._safe_send(interaction, content='❌ TAG must be exactly 3 characters.', ephemeral=True)
+            if user.alliance_id:
+                return await self._safe_send(interaction, content=get_text(user_id, 'alliance.already_member'), ephemeral=True)
+
+            alliance = await db.get_alliance_by_tag(clean_tag)
+            if not alliance:
+                return await self._safe_send(interaction, content=get_text(user_id, 'alliance.not_found'), ephemeral=True)
+
+            await db.join_alliance(user.user_id, alliance.alliance_id)
+            return await self._safe_send(interaction, content=get_text(user_id, 'alliance.joined_success'), ephemeral=True)
+
+        if action.value == 'leave':
+            if not user.alliance_id:
+                return await self._safe_send(interaction, content=get_text(user_id, 'alliance.no_alliance'), ephemeral=True)
+
+            alliance = await db.get_alliance(user.alliance_id)
+            if alliance and alliance.leader_id == user.user_id:
+                return await self._safe_send(interaction, content='❌ Leader cannot leave before transferring leadership.', ephemeral=True)
+
+            await db.leave_alliance(user.user_id, user.alliance_id)
+            return await self._safe_send(interaction, content=get_text(user_id, 'alliance.left_success'), ephemeral=True)
     
     async def show_alliance_menu(self, interaction: discord.Interaction):
         """Show alliance main menu"""
@@ -106,7 +180,7 @@ class AllianceSystemCog(commands.Cog):
                     custom_id='alliance_back'
                 ))
                 
-                await interaction.response.edit_message(embed=embed, view=view)
+                await self._safe_edit(interaction, embed=embed, view=view)
                 return
             
             # Check if user has alliance permissions
@@ -124,14 +198,11 @@ class AllianceSystemCog(commands.Cog):
                 'info'
             )
             
-            await interaction.response.edit_message(embed=embed, view=view)
+            await self._safe_edit(interaction, embed=embed, view=view)
             
         except Exception as e:
             logger.error(f"Error showing alliance menu: {e}")
-            await interaction.response.send_message(
-                f"❌ Error: {str(e)}",
-                ephemeral=True
-            )
+            await self._safe_send(interaction, content=f"❌ Error: {str(e)}", ephemeral=True)
     
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
@@ -139,7 +210,7 @@ class AllianceSystemCog(commands.Cog):
         if interaction.type != discord.InteractionType.component:
             return
         
-        custom_id = interaction.data.get('custom_id', '')
+        custom_id = (interaction.data or {}).get('custom_id', '')
         
         # Only handle alliance buttons
         if not custom_id.startswith('alliance_'):
@@ -173,18 +244,12 @@ class AllianceSystemCog(commands.Cog):
         try:
             user = await db.get_user_by_discord_id(user_id)
             if not user or not user.alliance_id:
-                await interaction.response.send_message(
-                    get_text(user_id, 'alliance.no_alliance'),
-                    ephemeral=True
-                )
+                await self._safe_send(interaction, content=get_text(user_id, 'alliance.no_alliance'), ephemeral=True)
                 return
             
             alliance = await db.get_alliance(user.alliance_id)
             if not alliance:
-                await interaction.response.send_message(
-                    get_text(user_id, 'alliance.not_found'),
-                    ephemeral=True
-                )
+                await self._safe_send(interaction, content=get_text(user_id, 'alliance.not_found'), ephemeral=True)
                 return
             
             embed = discord.Embed(
@@ -196,7 +261,7 @@ class AllianceSystemCog(commands.Cog):
             # Alliance details
             embed.add_field(
                 name=get_text(user_id, 'alliance.name'),
-                value=alliance.name,
+                value=f"{alliance.name} [{alliance.tag}]",
                 inline=True
             )
             
@@ -240,14 +305,11 @@ class AllianceSystemCog(commands.Cog):
                 custom_id='alliance_back_to_menu'
             ))
             
-            await interaction.response.edit_message(embed=embed, view=view)
+            await self._safe_edit(interaction, embed=embed, view=view)
             
         except Exception as e:
             logger.error(f"Error showing alliance info: {e}")
-            await interaction.response.send_message(
-                f"❌ Error: {str(e)}",
-                ephemeral=True
-            )
+            await self._safe_send(interaction, content=f"❌ Error: {str(e)}", ephemeral=True)
     
     async def _show_members(self, interaction: discord.Interaction):
         """Show alliance members"""
@@ -257,27 +319,18 @@ class AllianceSystemCog(commands.Cog):
         if not (permissions.is_owner(interaction.user) or 
                 permissions.is_admin(interaction.user) or
                 await permissions.has_permission(interaction.user, 'alliance_management')):
-            await interaction.response.send_message(
-                get_text(user_id, 'alliance.no_permission'),
-                ephemeral=True
-            )
+            await self._safe_send(interaction, content=get_text(user_id, 'alliance.no_permission'), ephemeral=True)
             return
         
         try:
             user = await db.get_user_by_discord_id(user_id)
             if not user or not user.alliance_id:
-                await interaction.response.send_message(
-                    get_text(user_id, 'alliance.no_alliance'),
-                    ephemeral=True
-                )
+                await self._safe_send(interaction, content=get_text(user_id, 'alliance.no_alliance'), ephemeral=True)
                 return
             
             alliance = await db.get_alliance(user.alliance_id)
             if not alliance:
-                await interaction.response.send_message(
-                    get_text(user_id, 'alliance.not_found'),
-                    ephemeral=True
-                )
+                await self._safe_send(interaction, content=get_text(user_id, 'alliance.not_found'), ephemeral=True)
                 return
             
             # Get all members
@@ -312,14 +365,11 @@ class AllianceSystemCog(commands.Cog):
                 custom_id='alliance_back_to_menu'
             ))
             
-            await interaction.response.edit_message(embed=embed, view=view)
+            await self._safe_edit(interaction, embed=embed, view=view)
             
         except Exception as e:
             logger.error(f"Error showing members: {e}")
-            await interaction.response.send_message(
-                f"❌ Error: {str(e)}",
-                ephemeral=True
-            )
+            await self._safe_send(interaction, content=f"❌ Error: {str(e)}", ephemeral=True)
     
     async def _show_ranks(self, interaction: discord.Interaction):
         """Show rank system"""
@@ -329,10 +379,7 @@ class AllianceSystemCog(commands.Cog):
         if not (permissions.is_owner(interaction.user) or 
                 permissions.is_admin(interaction.user) or
                 await permissions.has_permission(interaction.user, 'alliance_management')):
-            await interaction.response.send_message(
-                get_text(user_id, 'alliance.no_permission'),
-                ephemeral=True
-            )
+            await self._safe_send(interaction, content=get_text(user_id, 'alliance.no_permission'), ephemeral=True)
             return
         
         embed = discord.Embed(
@@ -365,7 +412,7 @@ class AllianceSystemCog(commands.Cog):
             custom_id='alliance_back_to_menu'
         ))
         
-        await interaction.response.edit_message(embed=embed, view=view)
+        await self._safe_edit(interaction, embed=embed, view=view)
     
     async def _back_to_main(self, interaction: discord.Interaction):
         """Go back to main control panel"""
@@ -383,7 +430,7 @@ class AllianceSystemCog(commands.Cog):
             'info'
         )
         
-        await interaction.response.edit_message(embed=embed, view=view)
+        await self._safe_edit(interaction, embed=embed, view=view)
 
 
 async def setup(bot):

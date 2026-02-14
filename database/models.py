@@ -18,7 +18,7 @@ class User:
     total_bookings: int = 0
     completed_bookings: int = 0
     cancelled_bookings: int = 0
-    language: str = 'ar'
+    language: str = 'en'
     last_activity: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -51,6 +51,7 @@ class Alliance:
     """نموذج التحالف"""
     alliance_id: Optional[int] = None
     name: str = ''
+    tag: str = ''
     description: str = ''
     rules: str = ''
     leader_id: int = 0

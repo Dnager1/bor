@@ -39,6 +39,14 @@ class BookingBot(commands.Bot):
     async def setup_hook(self):
         """إعداد البوت"""
         logger.info("🔧 بدء إعداد البوت...")
+
+        # Register persistent views
+        try:
+            from utils.buttons import MainMenuView
+            self.add_view(MainMenuView())
+            logger.info("✅ تم تسجيل Persistent Views")
+        except Exception as e:
+            logger.warning(f"⚠️ تعذر تسجيل Persistent Views: {e}")
         
         # تهيئة قاعدة البيانات
         try:

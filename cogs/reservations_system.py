@@ -291,6 +291,29 @@ class ReservationsSystemCog(commands.Cog):
     
     def __init__(self, bot):
         self.bot = bot
+
+    async def _safe_send(self, interaction: discord.Interaction, **kwargs):
+        if interaction.response.is_done():
+            return await interaction.followup.send(**kwargs)
+        return await interaction.response.send_message(**kwargs)
+
+    async def _safe_edit(self, interaction: discord.Interaction, **kwargs):
+        if interaction.response.is_done():
+            return await interaction.edit_original_response(**kwargs)
+        return await interaction.response.edit_message(**kwargs)
+
+    @app_commands.command(name='booking', description='📅 Open reservations menu')
+    async def booking(self, interaction: discord.Interaction):
+        """Open reservations menu"""
+        user_id = str(interaction.user.id)
+        await translator.load_user_language_from_db(db, user_id)
+        view = ReservationsMenuView(user_id)
+        embed = create_colored_embed(
+            get_text(user_id, 'reservations.menu_title'),
+            get_text(user_id, 'reservations.menu_desc'),
+            'info'
+        )
+        await self._safe_send(interaction, embed=embed, view=view, ephemeral=True)
     
     async def show_reservations_menu(self, interaction: discord.Interaction):
         """Show reservations main menu"""
@@ -304,7 +327,7 @@ class ReservationsSystemCog(commands.Cog):
             'info'
         )
         
-        await interaction.response.edit_message(embed=embed, view=view)
+        await self._safe_edit(interaction, embed=embed, view=view)
     
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
@@ -312,7 +335,7 @@ class ReservationsSystemCog(commands.Cog):
         if interaction.type != discord.InteractionType.component:
             return
         
-        custom_id = interaction.data.get('custom_id', '')
+        custom_id = (interaction.data or {}).get('custom_id', '')
         
         # Only handle reservation buttons
         if not custom_id.startswith('res_'):
@@ -368,7 +391,7 @@ class ReservationsSystemCog(commands.Cog):
             'info'
         )
         
-        await interaction.response.edit_message(embed=embed, view=view)
+        await self._safe_edit(interaction, embed=embed, view=view)
     
     async def _show_schedule(self, interaction: discord.Interaction, section_type: str):
         """Show schedule for a section"""
@@ -388,7 +411,7 @@ class ReservationsSystemCog(commands.Cog):
                 embed.description = get_text(user_id, 'reservations.no_data_msg')
             else:
                 for booking in bookings[:10]:  # Show first 10
-                    time_str = booking.scheduled_time.strftime('%Y-%m-%d %H:%M UTC')
+                    time_str = booking.scheduled_time.strftime('%Y-%m-%d %H:%M UTC') if booking.scheduled_time else 'N/A'
                     embed.add_field(
                         name=f"{booking.player_name} ({booking.alliance_name})",
                         value=f"**Time:** {time_str}\n**Duration:** {booking.duration_days} days",
@@ -403,12 +426,13 @@ class ReservationsSystemCog(commands.Cog):
                 custom_id=f'res_{section_type}'
             ))
             
-            await interaction.response.edit_message(embed=embed, view=view)
+            await self._safe_edit(interaction, embed=embed, view=view)
             
         except Exception as e:
             logger.error(f"Error showing schedule: {e}")
-            await interaction.response.send_message(
-                f"❌ Error: {str(e)}",
+            await self._safe_send(
+                interaction,
+                content=f"❌ Error: {str(e)}",
                 ephemeral=True
             )
     
@@ -419,10 +443,7 @@ class ReservationsSystemCog(commands.Cog):
         try:
             user = await db.get_user_by_discord_id(user_id)
             if not user:
-                await interaction.response.send_message(
-                    get_text(user_id, 'reservations.no_data_msg'),
-                    ephemeral=True
-                )
+                await self._safe_send(interaction, content=get_text(user_id, 'reservations.no_data_msg'), ephemeral=True)
                 return
             
             bookings = await db.get_user_bookings(user.user_id, 'active')
@@ -436,7 +457,7 @@ class ReservationsSystemCog(commands.Cog):
                 embed.description = get_text(user_id, 'reservations.no_reservations')
             else:
                 for booking in bookings:
-                    time_str = booking.scheduled_time.strftime('%Y-%m-%d %H:%M UTC')
+                    time_str = booking.scheduled_time.strftime('%Y-%m-%d %H:%M UTC') if booking.scheduled_time else 'N/A'
                     type_emoji = {'building': '🏗️', 'training': '⚔️', 'research': '🔬'}
                     embed.add_field(
                         name=f"{type_emoji.get(booking.booking_type, '📅')} {booking.booking_type.title()}",
@@ -452,12 +473,13 @@ class ReservationsSystemCog(commands.Cog):
                 custom_id='res_back_to_menu'
             ))
             
-            await interaction.response.edit_message(embed=embed, view=view)
+            await self._safe_edit(interaction, embed=embed, view=view)
             
         except Exception as e:
             logger.error(f"Error showing my reservations: {e}")
-            await interaction.response.send_message(
-                f"❌ Error: {str(e)}",
+            await self._safe_send(
+                interaction,
+                content=f"❌ Error: {str(e)}",
                 ephemeral=True
             )
     
@@ -477,7 +499,7 @@ class ReservationsSystemCog(commands.Cog):
             'info'
         )
         
-        await interaction.response.edit_message(embed=embed, view=view)
+        await self._safe_edit(interaction, embed=embed, view=view)
 
 
 async def setup(bot):

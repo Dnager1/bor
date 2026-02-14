@@ -237,3 +237,39 @@ class EmbedBuilder:
         return embed
 
 embeds = EmbedBuilder()
+
+
+def create_booking_embed(booking: Booking, user: Optional[User] = None):
+    return embeds.create_booking_embed(booking, user)
+
+
+def create_bookings_list_embed(bookings: List[Booking], title: str, page: int = 1, per_page: int = 5):
+    return embeds.create_bookings_list_embed(bookings, title, page, per_page)
+
+
+def create_stats_embed(user: User):
+    return embeds.create_stats_embed(user)
+
+
+def create_leaderboard_embed(users: List[User], title: str = "🏆 لوحة المتصدرين"):
+    return embeds.create_leaderboard_embed(users, title)
+
+
+def create_admin_stats_embed(stats: dict):
+    return embeds.create_admin_stats_embed(stats)
+
+
+def create_success_embed(title: str, description: str):
+    return embeds.create_success_embed(title, description)
+
+
+def create_error_embed(title: str, description: str):
+    return embeds.create_error_embed(title, description)
+
+
+def create_info_embed(title: str, description: str):
+    return embeds.create_info_embed(title, description)
+
+
+def create_warning_embed(title: str, description: str):
+    return embeds.create_warning_embed(title, description)

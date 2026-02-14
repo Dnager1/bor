@@ -5,6 +5,7 @@ import discord
 from discord import ui
 from typing import Optional, Callable, List
 import logging
+from datetime import datetime
 
 logger = logging.getLogger('buttons')
 
@@ -247,13 +248,27 @@ class BookingDetailsModal(ui.Modal, title="تفاصيل الحجز"):
         
         # إنشاء الحجز
         try:
-            booking = await db.create_booking(
-                user_id=str(interaction.user.id),
-                booking_type=self.booking_type,
-                scheduled_date=scheduled_datetime,
-                player_id=player_id,
-                notes=notes
+            user = await db.get_or_create_user(
+                str(interaction.user.id),
+                interaction.user.name,
+                player_id
             )
+
+            from database.models import Booking
+            booking = Booking(
+                user_id=user.user_id,
+                booking_type=self.booking_type,
+                player_name=interaction.user.name,
+                player_id=player_id,
+                alliance_name="",
+                scheduled_time=scheduled_datetime,
+                details=notes,
+                created_by=str(interaction.user.id),
+                duration_days=1,
+                created_at=datetime.now(),
+                updated_at=datetime.now(),
+            )
+            booking_id = await db.create_booking(booking)
             
             from config import config
             booking_info = config.BOOKING_TYPES.get(self.booking_type, {})
@@ -323,7 +338,8 @@ class CreateAllianceModal(ui.Modal, title="إنشاء تحالف جديد"):
         label="رمز التحالف",
         placeholder="مثال: KON",
         required=True,
-        max_length=5
+        min_length=3,
+        max_length=3
     )
     
     description_input = ui.TextInput(
@@ -339,16 +355,24 @@ class CreateAllianceModal(ui.Modal, title="إنشاء تحالف جديد"):
         from database import db
         
         try:
-            alliance = await db.create_alliance(
+            leader = await db.get_or_create_user(
+                str(interaction.user.id),
+                interaction.user.name,
+                str(interaction.user.id)
+            )
+
+            alliance_id = await db.create_alliance(
                 name=self.name_input.value.strip(),
                 tag=self.tag_input.value.strip().upper(),
-                leader_id=str(interaction.user.id),
+                leader_id=leader.user_id,
                 description=self.description_input.value.strip() if self.description_input.value else ""
             )
+
+            alliance = await db.get_alliance(alliance_id)
             
             embed = discord.Embed(
                 title="✅ تم إنشاء التحالف بنجاح",
-                description=f"**{alliance.name}** [{alliance.tag}]",
+                description=f"**{alliance.name}** [{alliance.tag}]" if alliance else "تم إنشاء التحالف",
                 color=discord.Color.green()
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)

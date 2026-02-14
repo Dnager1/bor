@@ -15,7 +15,7 @@ class Translator:
     def __init__(self):
         self.languages: Dict[str, Dict[str, Any]] = {}
         self.user_languages: Dict[str, str] = {}  # {user_id: language_code}
-        self.default_language = 'ar'
+        self.default_language = 'en'
         self.available_languages = ['ar', 'en']
         self.load_languages()
     
@@ -24,13 +24,24 @@ class Translator:
         languages_dir = os.path.join(os.path.dirname(__file__), 'languages')
         
         for lang_code in self.available_languages:
-            file_path = os.path.join(languages_dir, f'{lang_code}.json')
+            file_candidates = [
+                os.path.join(languages_dir, f'messages_{lang_code}.json'),
+                os.path.join(languages_dir, f'{lang_code}.json'),
+            ]
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    self.languages[lang_code] = json.load(f)
-                logger.info(f"✅ تم تحميل ملف اللغة: {lang_code}")
+                loaded = False
+                for file_path in file_candidates:
+                    if not os.path.exists(file_path):
+                        continue
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        self.languages[lang_code] = json.load(f)
+                    logger.info(f"✅ تم تحميل ملف اللغة: {file_path}")
+                    loaded = True
+                    break
+                if not loaded:
+                    logger.error(f"❌ لم يتم العثور على ملف لغة لـ: {lang_code}")
             except FileNotFoundError:
-                logger.error(f"❌ لم يتم العثور على ملف اللغة: {file_path}")
+                logger.error(f"❌ لم يتم العثور على ملف اللغة: {lang_code}")
             except json.JSONDecodeError as e:
                 logger.error(f"❌ خطأ في تحليل ملف اللغة {lang_code}: {e}")
     

@@ -98,6 +98,16 @@ class ManagementSystemCog(commands.Cog):
     
     def __init__(self, bot):
         self.bot = bot
+
+    async def _safe_send(self, interaction: discord.Interaction, **kwargs):
+        if interaction.response.is_done():
+            return await interaction.followup.send(**kwargs)
+        return await interaction.response.send_message(**kwargs)
+
+    async def _safe_edit(self, interaction: discord.Interaction, **kwargs):
+        if interaction.response.is_done():
+            return await interaction.edit_original_response(**kwargs)
+        return await interaction.response.edit_message(**kwargs)
     
     async def show_management_panel(self, interaction: discord.Interaction):
         """Show management panel"""
@@ -105,8 +115,9 @@ class ManagementSystemCog(commands.Cog):
         
         # Check permissions
         if not permissions.is_admin(interaction.user) and not permissions.is_owner(interaction.user):
-            await interaction.response.send_message(
-                get_text(user_id, 'admin.no_permission'),
+            await self._safe_send(
+                interaction,
+                content=get_text(user_id, 'admin.no_permission'),
                 ephemeral=True
             )
             return
@@ -120,7 +131,7 @@ class ManagementSystemCog(commands.Cog):
             'warning'
         )
         
-        await interaction.response.edit_message(embed=embed, view=view)
+        await self._safe_edit(interaction, embed=embed, view=view)
     
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
@@ -128,7 +139,7 @@ class ManagementSystemCog(commands.Cog):
         if interaction.type != discord.InteractionType.component:
             return
         
-        custom_id = interaction.data.get('custom_id', '')
+        custom_id = (interaction.data or {}).get('custom_id', '')
         
         # Only handle management buttons
         if not custom_id.startswith('mgmt_'):
@@ -141,8 +152,9 @@ class ManagementSystemCog(commands.Cog):
         
         # Check permissions for all management actions
         if not permissions.is_admin(interaction.user) and not permissions.is_owner(interaction.user):
-            await interaction.response.send_message(
-                get_text(user_id, 'admin.no_permission'),
+            await self._safe_send(
+                interaction,
+                content=get_text(user_id, 'admin.no_permission'),
                 ephemeral=True
             )
             return
@@ -177,8 +189,9 @@ class ManagementSystemCog(commands.Cog):
         if not (permissions.is_owner(interaction.user) or
                 permissions.is_admin(interaction.user) or
                 await permissions.has_permission(interaction.user, 'alliance_management')):
-            await interaction.response.send_message(
-                get_text(user_id, 'admin.no_permission'),
+            await self._safe_send(
+                interaction,
+                content=get_text(user_id, 'admin.no_permission'),
                 ephemeral=True
             )
             return
@@ -217,12 +230,13 @@ class ManagementSystemCog(commands.Cog):
                 custom_id='mgmt_back_to_panel'
             ))
             
-            await interaction.response.edit_message(embed=embed, view=view)
+            await self._safe_edit(interaction, embed=embed, view=view)
             
         except Exception as e:
             logger.error(f"Error showing alliance management: {e}")
-            await interaction.response.send_message(
-                f"❌ Error: {str(e)}",
+            await self._safe_send(
+                interaction,
+                content=f"❌ Error: {str(e)}",
                 ephemeral=True
             )
     
@@ -234,8 +248,9 @@ class ManagementSystemCog(commands.Cog):
         if not (permissions.is_owner(interaction.user) or
                 permissions.is_admin(interaction.user) or
                 await permissions.has_permission(interaction.user, 'reservations_management')):
-            await interaction.response.send_message(
-                get_text(user_id, 'admin.no_permission'),
+            await self._safe_send(
+                interaction,
+                content=get_text(user_id, 'admin.no_permission'),
                 ephemeral=True
             )
             return
@@ -276,12 +291,13 @@ class ManagementSystemCog(commands.Cog):
                 custom_id='mgmt_back_to_panel'
             ))
             
-            await interaction.response.edit_message(embed=embed, view=view)
+            await self._safe_edit(interaction, embed=embed, view=view)
             
         except Exception as e:
             logger.error(f"Error showing reservations management: {e}")
-            await interaction.response.send_message(
-                f"❌ Error: {str(e)}",
+            await self._safe_send(
+                interaction,
+                content=f"❌ Error: {str(e)}",
                 ephemeral=True
             )
     
@@ -293,8 +309,9 @@ class ManagementSystemCog(commands.Cog):
         if not (permissions.is_owner(interaction.user) or
                 permissions.is_admin(interaction.user) or
                 await permissions.has_permission(interaction.user, 'user_management')):
-            await interaction.response.send_message(
-                get_text(user_id, 'admin.no_permission'),
+            await self._safe_send(
+                interaction,
+                content=get_text(user_id, 'admin.no_permission'),
                 ephemeral=True
             )
             return
@@ -333,12 +350,13 @@ class ManagementSystemCog(commands.Cog):
                 custom_id='mgmt_back_to_panel'
             ))
             
-            await interaction.response.edit_message(embed=embed, view=view)
+            await self._safe_edit(interaction, embed=embed, view=view)
             
         except Exception as e:
             logger.error(f"Error showing users management: {e}")
-            await interaction.response.send_message(
-                f"❌ Error: {str(e)}",
+            await self._safe_send(
+                interaction,
+                content=f"❌ Error: {str(e)}",
                 ephemeral=True
             )
     
@@ -350,8 +368,9 @@ class ManagementSystemCog(commands.Cog):
         if not (permissions.is_owner(interaction.user) or
                 permissions.is_admin(interaction.user) or
                 await permissions.has_permission(interaction.user, 'system_management')):
-            await interaction.response.send_message(
-                get_text(user_id, 'admin.no_permission'),
+            await self._safe_send(
+                interaction,
+                content=get_text(user_id, 'admin.no_permission'),
                 ephemeral=True
             )
             return
@@ -394,7 +413,7 @@ class ManagementSystemCog(commands.Cog):
             custom_id='mgmt_back_to_panel'
         ))
         
-        await interaction.response.edit_message(embed=embed, view=view)
+        await self._safe_edit(interaction, embed=embed, view=view)
     
     async def _show_permissions_management(self, interaction: discord.Interaction):
         """Show permissions management (owner only)"""
@@ -402,8 +421,9 @@ class ManagementSystemCog(commands.Cog):
         
         # Owner only
         if not permissions.is_owner(interaction.user):
-            await interaction.response.send_message(
-                get_text(user_id, 'admin.owner_only'),
+            await self._safe_send(
+                interaction,
+                content=get_text(user_id, 'admin.owner_only'),
                 ephemeral=True
             )
             return
@@ -446,7 +466,7 @@ class ManagementSystemCog(commands.Cog):
             custom_id='mgmt_back_to_panel'
         ))
         
-        await interaction.response.edit_message(embed=embed, view=view)
+        await self._safe_edit(interaction, embed=embed, view=view)
     
     async def _back_to_main(self, interaction: discord.Interaction):
         """Go back to main control panel"""
@@ -464,7 +484,7 @@ class ManagementSystemCog(commands.Cog):
             'info'
         )
         
-        await interaction.response.edit_message(embed=embed, view=view)
+        await self._safe_edit(interaction, embed=embed, view=view)
 
 
 async def setup(bot):

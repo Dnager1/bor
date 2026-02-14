@@ -172,3 +172,35 @@ class Formatters:
         return text
 
 formatters = Formatters()
+
+
+def format_datetime(dt: datetime, include_time: bool = True):
+    return formatters.format_datetime(dt, include_time)
+
+
+def format_booking(booking: Booking):
+    return formatters.format_booking(booking)
+
+
+def format_status(status: str):
+    return formatters.format_status(status)
+
+
+def format_booking_list(bookings: List[Booking], page: int = 1, per_page: int = 5):
+    return formatters.format_booking_list(bookings, page, per_page)
+
+
+def format_user_stats(user: User):
+    return formatters.format_user_stats(user)
+
+
+def format_alliance_stats(alliance: Alliance):
+    return formatters.format_alliance_stats(alliance)
+
+
+def format_time_remaining(dt: datetime):
+    return formatters.format_time_remaining(dt)
+
+
+def format_leaderboard(users: List[User], title: str = "🏆 لوحة المتصدرين"):
+    return formatters.format_leaderboard(users, title)

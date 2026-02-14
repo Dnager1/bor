@@ -53,6 +53,21 @@ class Validators:
             return False, "❌ اسم التحالف طويل جداً (الحد الأقصى 50 حرف)"
         
         return True, None
+
+    @staticmethod
+    def validate_alliance_tag(tag: str) -> Tuple[bool, Optional[str]]:
+        """التحقق من رمز التحالف (3 أحرف/أرقام)"""
+        if not tag or len(tag.strip()) == 0:
+            return False, "❌ رمز التحالف مطلوب"
+
+        clean_tag = tag.strip().upper()
+        if len(clean_tag) != 3:
+            return False, "❌ رمز التحالف يجب أن يكون 3 أحرف"
+
+        if not re.match(r'^[A-Z0-9]{3}$', clean_tag):
+            return False, "❌ رمز التحالف يجب أن يحتوي أحرف/أرقام إنجليزية فقط"
+
+        return True, None
     
     @staticmethod
     def validate_datetime(date_str: str, time_str: str) -> Tuple[bool, Optional[datetime], Optional[str]]:
@@ -96,3 +111,31 @@ class Validators:
         return True, None
 
 validators = Validators()
+
+
+def validate_player_id(player_id: str):
+    return validators.validate_player_id(player_id)
+
+
+def validate_player_name(name: str):
+    return validators.validate_player_name(name)
+
+
+def validate_alliance_name(name: str):
+    return validators.validate_alliance_name(name)
+
+
+def validate_alliance_tag(tag: str):
+    return validators.validate_alliance_tag(tag)
+
+
+def validate_datetime(date_str: str, time_str: str):
+    return validators.validate_datetime(date_str, time_str)
+
+
+def validate_booking_type(booking_type: str):
+    return validators.validate_booking_type(booking_type)
+
+
+def validate_details(details: str):
+    return validators.validate_details(details)

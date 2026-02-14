@@ -7,6 +7,10 @@ echo "  Discord Bot - Quick Start"
 echo "========================================"
 echo ""
 
+# Ensure script runs from project root (bor)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # Check if .env file exists
 if [ ! -f .env ]; then
     echo "❌ Error: .env file not found!"
@@ -29,7 +33,7 @@ echo "📦 Checking dependencies..."
 python3 -c "import discord" 2>/dev/null
 if [ $? -ne 0 ]; then
     echo "📦 Installing dependencies..."
-    pip install -r requirements.txt
+    python3 -m pip install -r requirements.txt
     if [ $? -ne 0 ]; then
         echo "❌ Error: Failed to install dependencies"
         exit 1
