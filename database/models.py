@@ -18,7 +18,7 @@ class User:
     total_bookings: int = 0
     completed_bookings: int = 0
     cancelled_bookings: int = 0
-    language: str = 'en'
+    language: str = 'ar'
     last_activity: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

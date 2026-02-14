@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     total_bookings INTEGER DEFAULT 0,
     completed_bookings INTEGER DEFAULT 0,
     cancelled_bookings INTEGER DEFAULT 0,
-    language TEXT DEFAULT 'en',
+    language TEXT DEFAULT 'ar',
     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
