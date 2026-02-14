@@ -103,14 +103,14 @@ def get_timezone():
     """Get configured timezone"""
     return DateTimeHelper.get_timezone()
 
-def get_now():
+def get_now() -> datetime:
     """Get current time with timezone"""
     return DateTimeHelper.get_now()
 
-def is_past(dt):
+def is_past(dt: datetime) -> bool:
     """Check if datetime is in the past"""
     return DateTimeHelper.is_past(dt)
 
-def get_time_until(dt):
+def get_time_until(dt: datetime) -> timedelta:
     """Get time remaining until datetime"""
     return DateTimeHelper.get_time_until(dt)
