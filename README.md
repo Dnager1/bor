@@ -68,6 +68,7 @@ python bot.py
 
 للحصول على دليل شامل للتثبيت والإعداد والاستخدام، يرجى الاطلاع على:
 - **[دليل النشر الكامل](DEPLOYMENT.md)** - تعليمات مفصلة
+- **[دليل إعداد متغيرات البيئة](ENVIRONMENT_SETUP.md)** - حل مشاكل التكوين والـ Token
 
 ## 🎮 الاستخدام
 
@@ -94,6 +95,18 @@ python bot.py
 - discord.py 2.3.0+
 - SQLite (aiosqlite)
 - i18n (Arabic & English)
+
+## 🔧 استكشاف الأخطاء | Troubleshooting
+
+إذا واجهت خطأ "DISCORD_BOT_TOKEN not found":
+- راجع **[دليل إعداد متغيرات البيئة](ENVIRONMENT_SETUP.md)**
+- تأكد من إنشاء ملف `.env` من `.env.example`
+- للـ Docker/Pterodactyl: راجع قسم "System Environment Variables" في الدليل
+
+If you encounter "DISCORD_BOT_TOKEN not found" error:
+- Check **[Environment Setup Guide](ENVIRONMENT_SETUP.md)**
+- Make sure to create `.env` file from `.env.example`
+- For Docker/Pterodactyl: See "System Environment Variables" section in the guide
 
 ## 📝 الترخيص
 
