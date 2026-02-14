@@ -8,10 +8,13 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT NOT NULL,
     player_id TEXT NOT NULL,
     alliance_id INTEGER,
+    alliance_rank TEXT DEFAULT 'R1',
     points INTEGER DEFAULT 0,
     total_bookings INTEGER DEFAULT 0,
     completed_bookings INTEGER DEFAULT 0,
     cancelled_bookings INTEGER DEFAULT 0,
+    language TEXT DEFAULT 'en',
+    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (alliance_id) REFERENCES alliances(alliance_id)
@@ -26,6 +29,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     player_id TEXT NOT NULL,
     alliance_name TEXT NOT NULL,
     scheduled_time TIMESTAMP NOT NULL,
+    duration_days INTEGER DEFAULT 1,
     details TEXT,
     status TEXT DEFAULT 'active' CHECK(status IN ('active', 'completed', 'cancelled', 'expired')),
     reminder_24h_sent BOOLEAN DEFAULT 0,
@@ -45,8 +49,13 @@ CREATE TABLE IF NOT EXISTS alliances (
     alliance_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
     description TEXT,
+    rules TEXT,
     leader_id INTEGER NOT NULL,
+    level INTEGER DEFAULT 1,
+    total_power INTEGER DEFAULT 0,
     member_count INTEGER DEFAULT 1,
+    max_members INTEGER DEFAULT 50,
+    location TEXT,
     total_bookings INTEGER DEFAULT 0,
     total_points INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -73,6 +82,16 @@ CREATE TABLE IF NOT EXISTS logs (
     description TEXT NOT NULL,
     details TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- جدول الصلاحيات
+CREATE TABLE IF NOT EXISTS permissions (
+    permission_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    discord_id TEXT NOT NULL,
+    permission_type TEXT NOT NULL,
+    granted_by TEXT NOT NULL,
+    granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(discord_id, permission_type)
 );
 
 -- جدول الإعدادات

@@ -69,14 +69,10 @@ class BookingBot(commands.Bot):
         
         # تحميل الـ Cogs
         cogs_to_load = [
-            'cogs.bookings',
-            'cogs.admin',
-            'cogs.admin_panel',
-            'cogs.permissions_manager',
-            'cogs.stats',
-            'cogs.alliance',
-            'cogs.alliance_advanced',
-            'cogs.help'
+            'cogs.main_control_panel',
+            'cogs.reservations_system',
+            'cogs.alliance_system',
+            'cogs.management_system',
         ]
         
         for cog in cogs_to_load:
