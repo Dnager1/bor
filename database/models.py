@@ -13,13 +13,15 @@ class User:
     username: str
     player_id: str
     alliance_id: Optional[int] = None
+    alliance_rank: str = 'R1'
     points: int = 0
     total_bookings: int = 0
     completed_bookings: int = 0
     cancelled_bookings: int = 0
+    language: str = 'en'
+    last_activity: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    language: str = 'ar'
 
 @dataclass
 class Booking:
@@ -50,17 +52,16 @@ class Alliance:
     alliance_id: Optional[int] = None
     name: str = ''
     description: str = ''
+    rules: str = ''
     leader_id: int = 0
+    level: int = 1
+    total_power: int = 0
     member_count: int = 1
+    max_members: int = 50
+    location: str = ''
     total_bookings: int = 0
     total_points: int = 0
     created_at: Optional[datetime] = None
-    alliance_logo: str = '🏰'
-    alliance_type: str = 'public'
-    max_members: int = 50
-    requirements: str = ''
-    completed_bookings: int = 0
-    alliance_rank: int = 0
 
 @dataclass
 class Achievement:
