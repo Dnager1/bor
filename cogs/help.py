@@ -43,7 +43,7 @@ class HelpCog(commands.Cog):
         embed.set_footer(text=f"مرحباً {interaction.user.name} | استخدم /help للمزيد من المعلومات")
         
         view = MainMenuView()
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
     @app_commands.command(name='menu', description='📋 القائمة الرئيسية - Main Menu')
     async def menu(self, interaction: discord.Interaction):
