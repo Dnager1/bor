@@ -47,6 +47,12 @@
     "history": "📜 Reservation History"
   },
   "alliance": {
+      "create": "🆕 Create Alliance",
+      "join": "➕ Join Alliance",
+      "leave": "🚪 Leave Alliance",
+      "promote": "⬆️ Promote Member",
+      "demote": "⬇️ Demote Member",
+      "kick": "❌ Kick Member",
     "menu_title": "🤝 Alliance Menu",
     "menu_desc": "Choose what you want to do",
     "info": "ℹ️ Alliance Info",

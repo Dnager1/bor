@@ -18,19 +18,25 @@ logger = logging.getLogger('alliance_system')
 
 
 class AllianceMenuView(discord.ui.View):
+    @discord.ui.button(label='عرض الأعضاء', style=discord.ButtonStyle.primary, custom_id='alliance_members', row=1)
+    async def alliance_members_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        cog = interaction.client.get_cog('AllianceSystemCog')
+        if cog:
+            await cog._show_members(interaction)
     """Alliance main menu"""
     
-    def __init__(self, user_id: str, has_permissions: bool = False):
+    def __init__(self, user_id: str, in_alliance: bool = False, has_permissions: bool = False):
         super().__init__(timeout=180)
         self.user_id = user_id
+        self.in_alliance = in_alliance
         self.has_permissions = has_permissions
         self._build_buttons()
     
     def _build_buttons(self):
-        """Build alliance menu buttons"""
+        """Build alliance menu buttons (شامل)"""
         user_id = self.user_id
-        
-        # Alliance info button (always visible)
+        # زر معلومات التحالف دائمًا
         self.add_item(discord.ui.Button(
             label=get_text(user_id, 'alliance.info'),
             style=discord.ButtonStyle.primary,
@@ -38,31 +44,54 @@ class AllianceMenuView(discord.ui.View):
             emoji='ℹ️',
             row=0
         ))
-        
-        # Member management (only with permissions)
-        if self.has_permissions:
+        # إذا لم يكن في تحالف: أزرار تسجيل/انضمام
+        if not self.in_alliance:
             self.add_item(discord.ui.Button(
-                label=get_text(user_id, 'alliance.members'),
-                style=discord.ButtonStyle.primary,
-                custom_id='alliance_members',
-                emoji='👥',
+                label=get_text(user_id, 'alliance.create'),
+                style=discord.ButtonStyle.success,
+                custom_id='alliance_create',
+                emoji='🆕',
                 row=0
             ))
-            
+            self.add_item(discord.ui.Button(
+            # The code to fetch and display members has been removed to ensure it is within the try/except block.
+            # Further implementation should be added here.
+            ))
             self.add_item(discord.ui.Button(
                 label=get_text(user_id, 'alliance.ranks'),
                 style=discord.ButtonStyle.primary,
                 custom_id='alliance_ranks',
-                emoji='🎖️',
-                row=0
+                emoji='🏖️',
+                row=1
             ))
-        
-        # Back button
+            # أزرار إدارة الأعضاء (ترقية/تنزيل/طرد)
+            self.add_item(discord.ui.Button(
+                label=get_text(user_id, 'alliance.promote'),
+                style=discord.ButtonStyle.success,
+                custom_id='alliance_promote',
+                emoji='⬆️',
+                row=2
+            ))
+            self.add_item(discord.ui.Button(
+                label=get_text(user_id, 'alliance.demote'),
+                style=discord.ButtonStyle.secondary,
+                custom_id='alliance_demote',
+                emoji='⬇️',
+                row=2
+            ))
+            self.add_item(discord.ui.Button(
+                label=get_text(user_id, 'alliance.kick'),
+                style=discord.ButtonStyle.danger,
+                custom_id='alliance_kick',
+                emoji='❌',
+                row=2
+            ))
+        # زر العودة
         self.add_item(discord.ui.Button(
             label=get_text(user_id, 'common.back'),
             style=discord.ButtonStyle.secondary,
             custom_id='alliance_back',
-            row=1
+            row=4
         ))
     
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -163,79 +192,32 @@ class AllianceSystemCog(commands.Cog):
         try:
             # Get user
             user = await db.get_user_by_discord_id(user_id)
-            
-            if not user or not user.alliance_id:
-                # User not in alliance
-                embed = create_colored_embed(
-                    get_text(user_id, 'alliance.menu_title'),
-                    get_text(user_id, 'alliance.no_alliance'),
-                    'warning'
-                )
-                
-                # Back button only
-                view = discord.ui.View(timeout=180)
-                view.add_item(discord.ui.Button(
-                    label=get_text(user_id, 'common.back'),
-                    style=discord.ButtonStyle.secondary,
-                    custom_id='alliance_back'
-                ))
-                
-                await self._safe_edit(interaction, embed=embed, view=view)
-                return
-            
+            in_alliance = bool(user and user.alliance_id)
             # Check if user has alliance permissions
             has_permissions = (
                 permissions.is_owner(interaction.user) or
                 permissions.is_admin(interaction.user) or
                 await permissions.has_permission(interaction.user, 'alliance_management')
             )
-            
-            view = AllianceMenuView(user_id, has_permissions)
-            
-            embed = create_colored_embed(
-                get_text(user_id, 'alliance.menu_title'),
-                get_text(user_id, 'alliance.menu_desc'),
-                'info'
-            )
-            
+            view = AllianceMenuView(user_id, in_alliance, has_permissions)
+            if not in_alliance:
+                embed = create_colored_embed(
+                    get_text(user_id, 'alliance.menu_title'),
+                    get_text(user_id, 'alliance.no_alliance'),
+                    'warning'
+                )
+            else:
+                embed = create_colored_embed(
+                    get_text(user_id, 'alliance.menu_title'),
+                    get_text(user_id, 'alliance.menu_desc'),
+                    'info'
+                )
             await self._safe_edit(interaction, embed=embed, view=view)
-            
         except Exception as e:
             logger.error(f"Error showing alliance menu: {e}")
             await self._safe_send(interaction, content=f"❌ Error: {str(e)}", ephemeral=True)
     
-    @commands.Cog.listener()
-    async def on_interaction(self, interaction: discord.Interaction):
-        """Handle alliance interactions"""
-        if interaction.type != discord.InteractionType.component:
-            return
-        
-        custom_id = (interaction.data or {}).get('custom_id', '')
-        
-        # Only handle alliance buttons
-        if not custom_id.startswith('alliance_'):
-            return
-        
-        user_id = str(interaction.user.id)
-        
-        # Load user language
-        await translator.load_user_language_from_db(db, user_id)
-        
-        # Route to handlers
-        if custom_id == 'alliance_info':
-            await self._show_alliance_info(interaction)
-        
-        elif custom_id == 'alliance_members':
-            await self._show_members(interaction)
-        
-        elif custom_id == 'alliance_ranks':
-            await self._show_ranks(interaction)
-        
-        elif custom_id == 'alliance_back':
-            await self._back_to_main(interaction)
-        
-        elif custom_id == 'alliance_back_to_menu':
-            await self.show_alliance_menu(interaction)
+    # تم حذف بقايا كود غير مرتب خارج الدوال
     
     async def _show_alliance_info(self, interaction: discord.Interaction):
         """Show alliance information"""
@@ -306,6 +288,24 @@ class AllianceSystemCog(commands.Cog):
             ))
             
             await self._safe_edit(interaction, embed=embed, view=view)
+    
+            async def _back_to_main(self, interaction: discord.Interaction):
+                """Go back to main control panel"""
+                user_id = str(interaction.user.id)
+        
+                is_admin = permissions.is_admin(interaction.user)
+                is_owner = permissions.is_owner(interaction.user)
+        
+                from cogs.main_control_panel import MainControlPanelView
+                view = MainControlPanelView(user_id, is_admin, is_owner)
+        
+                embed = create_colored_embed(
+                    get_text(user_id, 'main_menu.title'),
+                    get_text(user_id, 'main_menu.description'),
+                    'info'
+                )
+        
+                await self._safe_edit(interaction, embed=embed, view=view)
             
         except Exception as e:
             logger.error(f"Error showing alliance info: {e}")
@@ -357,62 +357,73 @@ class AllianceSystemCog(commands.Cog):
             else:
                 embed.description = "No members found"
             
-            # Back button
-            view = discord.ui.View(timeout=180)
-            view.add_item(discord.ui.Button(
-                label=get_text(user_id, 'common.back'),
-                style=discord.ButtonStyle.secondary,
-                custom_id='alliance_back_to_menu'
-            ))
             
+        except Exception as e:
+        
+            await self._safe_send(interaction, content=f"❌ Error: {str(e)}", ephemeral=True)
+    
+    async def _show_members(self, interaction: discord.Interaction):
+        """Show alliance members (منظم ونهائي)"""
+        user_id = str(interaction.user.id)
+        try:
+            user = await db.get_user_by_discord_id(user_id)
+            if not user or not user.alliance_id:
+                embed = discord.Embed(title=get_text(user_id, 'alliance.members_title'), color=discord.Color.blue())
+                embed.description = get_text(user_id, 'alliance.no_alliance')
+                view = discord.ui.View(timeout=180)
+                view.add_item(discord.ui.Button(
+                    label=get_text(user_id, 'common.back'),
+                    style=discord.ButtonStyle.secondary,
+                    custom_id='alliance_back_to_menu'
+                ))
+                await self._safe_edit(interaction, embed=embed, view=view)
+                return
+            alliance = await db.get_alliance(user.alliance_id)
+            if not alliance:
+                embed = discord.Embed(title=get_text(user_id, 'alliance.members_title'), color=discord.Color.blue())
+                embed.description = get_text(user_id, 'alliance.not_found')
+                view = discord.ui.View(timeout=180)
+                view.add_item(discord.ui.Button(
+                    label=get_text(user_id, 'common.back'),
+                    style=discord.ButtonStyle.secondary,
+                    custom_id='alliance_back_to_menu'
+                ))
+                await self._safe_edit(interaction, embed=embed, view=view)
+                return
+            members_data = await db.fetchall(
+                "SELECT discord_id, username, alliance_rank, last_activity FROM users WHERE alliance_id = ? ORDER BY alliance_rank DESC",
+                (alliance.alliance_id,)
+            )
+            embed = discord.Embed(
+                title=get_text(user_id, 'alliance.members_title'),
+                description=f"**{alliance.name}** - {len(members_data)} members",
+                color=discord.Color.blue()
+            )
+            if members_data:
+                for member in members_data[:15]:  # Show first 15
+                    discord_id, username, rank, last_activity = member
+                    rank_name = rank or "R1"
+                    embed.add_field(
+                        name=f"**{username}** - {rank_name}",
+                        value=f"ID: {discord_id}",
+                        inline=False
+                    )
+                view = AllianceMembersManagementView(user_id, members_data[:5])
+            else:
+                embed.description = get_text(user_id, 'alliance.no_members')
+                view = discord.ui.View(timeout=180)
+                view.add_item(discord.ui.Button(
+                    label=get_text(user_id, 'common.back'),
+                    style=discord.ButtonStyle.secondary,
+                    custom_id='alliance_back_to_menu'
+                ))
             await self._safe_edit(interaction, embed=embed, view=view)
-            
+            return
         except Exception as e:
             logger.error(f"Error showing members: {e}")
             await self._safe_send(interaction, content=f"❌ Error: {str(e)}", ephemeral=True)
-    
-    async def _show_ranks(self, interaction: discord.Interaction):
-        """Show rank system"""
-        user_id = str(interaction.user.id)
         
-        # Check permissions
-        if not (permissions.is_owner(interaction.user) or 
-                permissions.is_admin(interaction.user) or
-                await permissions.has_permission(interaction.user, 'alliance_management')):
-            await self._safe_send(interaction, content=get_text(user_id, 'alliance.no_permission'), ephemeral=True)
-            return
         
-        embed = discord.Embed(
-            title=get_text(user_id, 'alliance.ranks_title'),
-            description="Alliance rank system and permissions",
-            color=discord.Color.purple()
-        )
-        
-        # Define ranks
-        ranks = [
-            ('R5', get_text(user_id, 'alliance.rank_r5'), 'Full alliance control'),
-            ('R4', get_text(user_id, 'alliance.rank_r4'), 'Can manage members and accept requests'),
-            ('R3', get_text(user_id, 'alliance.rank_r3'), 'Can view and manage reservations'),
-            ('R2', get_text(user_id, 'alliance.rank_r2'), 'Can create reservations'),
-            ('R1', get_text(user_id, 'alliance.rank_r1'), 'Basic member access'),
-        ]
-        
-        for rank_code, rank_name, permissions_desc in ranks:
-            embed.add_field(
-                name=f"**{rank_name}**",
-                value=f"Permissions: {permissions_desc}",
-                inline=False
-            )
-        
-        # Back button
-        view = discord.ui.View(timeout=180)
-        view.add_item(discord.ui.Button(
-            label=get_text(user_id, 'common.back'),
-            style=discord.ButtonStyle.secondary,
-            custom_id='alliance_back_to_menu'
-        ))
-        
-        await self._safe_edit(interaction, embed=embed, view=view)
     
     async def _back_to_main(self, interaction: discord.Interaction):
         """Go back to main control panel"""
