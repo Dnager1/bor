@@ -176,7 +176,7 @@ class ManagementSystemCog(commands.Cog):
         # Check specific permission
         if not (permissions.is_owner(interaction.user) or
                 permissions.is_admin(interaction.user) or
-                permissions.has_permission(interaction.user, 'alliance_management')):
+                await permissions.has_permission(interaction.user, 'alliance_management')):
             await interaction.response.send_message(
                 get_text(user_id, 'admin.no_permission'),
                 ephemeral=True
@@ -233,7 +233,7 @@ class ManagementSystemCog(commands.Cog):
         # Check specific permission
         if not (permissions.is_owner(interaction.user) or
                 permissions.is_admin(interaction.user) or
-                permissions.has_permission(interaction.user, 'reservations_management')):
+                await permissions.has_permission(interaction.user, 'reservations_management')):
             await interaction.response.send_message(
                 get_text(user_id, 'admin.no_permission'),
                 ephemeral=True
@@ -292,7 +292,7 @@ class ManagementSystemCog(commands.Cog):
         # Check specific permission
         if not (permissions.is_owner(interaction.user) or
                 permissions.is_admin(interaction.user) or
-                permissions.has_permission(interaction.user, 'user_management')):
+                await permissions.has_permission(interaction.user, 'user_management')):
             await interaction.response.send_message(
                 get_text(user_id, 'admin.no_permission'),
                 ephemeral=True
@@ -349,7 +349,7 @@ class ManagementSystemCog(commands.Cog):
         # Check specific permission
         if not (permissions.is_owner(interaction.user) or
                 permissions.is_admin(interaction.user) or
-                permissions.has_permission(interaction.user, 'system_management')):
+                await permissions.has_permission(interaction.user, 'system_management')):
             await interaction.response.send_message(
                 get_text(user_id, 'admin.no_permission'),
                 ephemeral=True

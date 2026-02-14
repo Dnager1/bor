@@ -113,7 +113,7 @@ class AllianceSystemCog(commands.Cog):
             has_permissions = (
                 permissions.is_owner(interaction.user) or
                 permissions.is_admin(interaction.user) or
-                permissions.has_permission(interaction.user, 'alliance_management')
+                await permissions.has_permission(interaction.user, 'alliance_management')
             )
             
             view = AllianceMenuView(user_id, has_permissions)
@@ -256,7 +256,7 @@ class AllianceSystemCog(commands.Cog):
         # Check permissions
         if not (permissions.is_owner(interaction.user) or 
                 permissions.is_admin(interaction.user) or
-                permissions.has_permission(interaction.user, 'alliance_management')):
+                await permissions.has_permission(interaction.user, 'alliance_management')):
             await interaction.response.send_message(
                 get_text(user_id, 'alliance.no_permission'),
                 ephemeral=True
@@ -328,7 +328,7 @@ class AllianceSystemCog(commands.Cog):
         # Check permissions
         if not (permissions.is_owner(interaction.user) or 
                 permissions.is_admin(interaction.user) or
-                permissions.has_permission(interaction.user, 'alliance_management')):
+                await permissions.has_permission(interaction.user, 'alliance_management')):
             await interaction.response.send_message(
                 get_text(user_id, 'alliance.no_permission'),
                 ephemeral=True
