@@ -68,8 +68,33 @@ class Config:
     def validate(cls) -> bool:
         """التحقق من صحة الإعدادات"""
         if not cls.BOT_TOKEN:
-            print("❌ خطأ: DISCORD_BOT_TOKEN غير موجود في ملف .env")
+            print("=" * 60)
+            print("❌ خطأ: DISCORD_BOT_TOKEN غير موجود")
+            print("❌ Error: DISCORD_BOT_TOKEN not found")
+            print("=" * 60)
+            print()
+            print("يرجى تعيين المتغير DISCORD_BOT_TOKEN بإحدى الطرق التالية:")
+            print("Please set DISCORD_BOT_TOKEN using one of the following methods:")
+            print()
+            print("1️⃣  إنشاء ملف .env في المجلد الحالي:")
+            print("    Create a .env file in the current directory:")
+            print("    cp .env.example .env")
+            print("    # ثم قم بتعديل الملف وإضافة التوكن")
+            print("    # Then edit the file and add your token")
+            print()
+            print("2️⃣  أو تعيين متغير البيئة مباشرة:")
+            print("    Or set the environment variable directly:")
+            print("    export DISCORD_BOT_TOKEN='your_token_here'")
+            print()
+            print("3️⃣  لـ Docker أو منصات الاستضافة:")
+            print("    For Docker or hosting platforms:")
+            print("    # قم بتعيين المتغير في لوحة التحكم أو docker-compose.yml")
+            print("    # Set the variable in your control panel or docker-compose.yml")
+            print("=" * 60)
             return False
+        
+        # Success message
+        print("✅ تم التحقق من الإعدادات بنجاح | Configuration validated successfully")
         return True
 
 config = Config()
