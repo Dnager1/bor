@@ -25,7 +25,7 @@ class MainMenuView(ui.View):
         
         # زر إنشاء حجز جديد
         self.add_item(MenuButton(
-            label="📝 حجز جديد",
+            label="حجز جديد",
             emoji="📝",
             style=discord.ButtonStyle.success,
             custom_id="btn_new_booking",
@@ -34,7 +34,7 @@ class MainMenuView(ui.View):
         
         # زر عرض حجوزاتي
         self.add_item(MenuButton(
-            label="📋 حجوزاتي",
+            label="حجوزاتي",
             emoji="📋",
             style=discord.ButtonStyle.primary,
             custom_id="btn_my_bookings",
@@ -43,7 +43,7 @@ class MainMenuView(ui.View):
         
         # زر الإحصائيات
         self.add_item(MenuButton(
-            label="📊 إحصائياتي",
+            label="إحصائياتي",
             emoji="📊",
             style=discord.ButtonStyle.secondary,
             custom_id="btn_my_stats",
@@ -52,7 +52,7 @@ class MainMenuView(ui.View):
         
         # زر التحالفات
         self.add_item(MenuButton(
-            label="🏰 التحالفات",
+            label="التحالفات",
             emoji="🏰",
             style=discord.ButtonStyle.secondary,
             custom_id="btn_alliances",
@@ -61,7 +61,7 @@ class MainMenuView(ui.View):
         
         # زر المساعدة
         self.add_item(MenuButton(
-            label="❓ المساعدة",
+            label="المساعدة",
             emoji="❓",
             style=discord.ButtonStyle.secondary,
             custom_id="btn_help",
@@ -273,7 +273,7 @@ class BookingDetailsModal(ui.Modal, title="تفاصيل الحجز"):
             
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as e:
-            logger.error(f"فشل إنشاء الحجز: {e}", exc_info=e)
+            logger.error(f"فشل إنشاء الحجز: {e}", exc_info=True)
             await interaction.response.send_message(f"❌ فشل إنشاء الحجز: {e}", ephemeral=True)
 
 class BookingsActionsView(ui.View):
@@ -353,5 +353,5 @@ class CreateAllianceModal(ui.Modal, title="إنشاء تحالف جديد"):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as e:
-            logger.error(f"فشل إنشاء التحالف: {e}", exc_info=e)
+            logger.error(f"فشل إنشاء التحالف: {e}", exc_info=True)
             await interaction.response.send_message(f"❌ فشل إنشاء التحالف: {e}", ephemeral=True)
