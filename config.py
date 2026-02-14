@@ -93,8 +93,6 @@ class Config:
             print("=" * 60)
             return False
         
-        # Success message
-        print("✅ تم التحقق من الإعدادات بنجاح | Configuration validated successfully")
         return True
 
 config = Config()
