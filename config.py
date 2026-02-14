@@ -13,18 +13,18 @@ class Config:
     
     # Discord Configuration
     BOT_TOKEN: str = os.getenv('DISCORD_BOT_TOKEN', '')
-    GUILD_ID: Optional[int] = int(os.getenv('GUILD_ID', 0)) if os.getenv('GUILD_ID') else None
+    GUILD_ID: Optional[int] = int(os.getenv('GUILD_ID')) if os.getenv('GUILD_ID') and os.getenv('GUILD_ID').strip() else None
     
     # Owner Configuration
     OWNER_ID: int = int(os.getenv('OWNER_ID', 1376784524016619551))
     
     # Role IDs
-    ADMIN_ROLE_ID: int = int(os.getenv('ADMIN_ROLE_ID', 0))
-    MODERATOR_ROLE_ID: int = int(os.getenv('MODERATOR_ROLE_ID', 0))
+    ADMIN_ROLE_ID: int = int(os.getenv('ADMIN_ROLE_ID')) if os.getenv('ADMIN_ROLE_ID') and os.getenv('ADMIN_ROLE_ID').strip() else 0
+    MODERATOR_ROLE_ID: int = int(os.getenv('MODERATOR_ROLE_ID')) if os.getenv('MODERATOR_ROLE_ID') and os.getenv('MODERATOR_ROLE_ID').strip() else 0
     
     # Channel IDs
-    LOG_CHANNEL_ID: Optional[int] = int(os.getenv('LOG_CHANNEL_ID', 0)) if os.getenv('LOG_CHANNEL_ID') else None
-    ANNOUNCEMENT_CHANNEL_ID: Optional[int] = int(os.getenv('ANNOUNCEMENT_CHANNEL_ID', 0)) if os.getenv('ANNOUNCEMENT_CHANNEL_ID') else None
+    LOG_CHANNEL_ID: Optional[int] = int(os.getenv('LOG_CHANNEL_ID')) if os.getenv('LOG_CHANNEL_ID') and os.getenv('LOG_CHANNEL_ID').strip() else None
+    ANNOUNCEMENT_CHANNEL_ID: Optional[int] = int(os.getenv('ANNOUNCEMENT_CHANNEL_ID')) if os.getenv('ANNOUNCEMENT_CHANNEL_ID') and os.getenv('ANNOUNCEMENT_CHANNEL_ID').strip() else None
     
     # Bot Settings
     MAX_ACTIVE_BOOKINGS: int = int(os.getenv('MAX_ACTIVE_BOOKINGS', 5))
